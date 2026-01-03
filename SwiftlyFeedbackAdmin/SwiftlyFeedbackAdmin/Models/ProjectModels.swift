@@ -15,7 +15,7 @@ struct Project: Codable, Identifiable, Sendable, Hashable {
     let updatedAt: Date?
 }
 
-struct ProjectListItem: Codable, Identifiable, Sendable, Hashable {
+struct ProjectListItem: Codable, Identifiable, Sendable {
     let id: UUID
     let name: String
     let description: String?
@@ -24,6 +24,16 @@ struct ProjectListItem: Codable, Identifiable, Sendable, Hashable {
     let role: ProjectRole?
     let feedbackCount: Int
     let createdAt: Date?
+}
+
+extension ProjectListItem: Hashable {
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(id)
+    }
+
+    static func == (lhs: ProjectListItem, rhs: ProjectListItem) -> Bool {
+        lhs.id == rhs.id
+    }
 }
 
 struct ProjectMember: Codable, Identifiable, Sendable, Hashable {

@@ -2,18 +2,75 @@ import SwiftUI
 
 struct SettingsView: View {
     @Bindable var authViewModel: AuthViewModel
+    var projectViewModel: ProjectViewModel?
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
 
     @State private var showingLogoutConfirmation = false
     @State private var showingChangePassword = false
     @State private var showingDeleteAccount = false
+    @State private var showingDeveloperCommands = false
     @State private var pendingLogout = false
 
     var body: some View {
         settingsContent
-            #if os(iOS)
-            .navigationBarTitleDisplayMode(horizontalSizeClass == .regular ? .large : .automatic)
-            #endif
+            .navigationTitle("Settings")
+            .sheet(isPresented: $showingChangePassword) {
+                ChangePasswordView(authViewModel: authViewModel) {
+                    pendingLogout = true
+                }
+                #if os(iOS)
+                .presentationDetents([.medium, .large])
+                .presentationDragIndicator(.visible)
+                #endif
+            }
+            .sheet(isPresented: $showingDeleteAccount) {
+                DeleteAccountView(authViewModel: authViewModel) {
+                    pendingLogout = true
+                }
+                #if os(iOS)
+                .presentationDetents([.medium])
+                .presentationDragIndicator(.visible)
+                #endif
+            }
+            .sheet(isPresented: $showingDeveloperCommands) {
+                if let projectViewModel = projectViewModel {
+                    DeveloperCommandsView(projectViewModel: projectViewModel)
+                        #if os(macOS)
+                        .frame(minWidth: 500, minHeight: 500)
+                        #endif
+                }
+            }
+            .onChange(of: showingChangePassword) { _, isShowing in
+                if !isShowing && pendingLogout {
+                    pendingLogout = false
+                    authViewModel.forceLogout()
+                }
+            }
+            .onChange(of: showingDeleteAccount) { _, isShowing in
+                if !isShowing && pendingLogout {
+                    pendingLogout = false
+                    authViewModel.forceLogout()
+                }
+            }
+            .confirmationDialog(
+                "Sign Out",
+                isPresented: $showingLogoutConfirmation,
+                titleVisibility: .visible
+            ) {
+                Button("Sign Out", role: .destructive) {
+                    Task {
+                        await authViewModel.logout()
+                    }
+                }
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text("Are you sure you want to sign out of your account?")
+            }
+            .alert("Error", isPresented: $authViewModel.showError) {
+                Button("OK", role: .cancel) {}
+            } message: {
+                Text(authViewModel.errorMessage ?? "An unexpected error occurred")
+            }
     }
 
     @ViewBuilder
@@ -28,6 +85,11 @@ struct SettingsView: View {
             // About Section
             aboutSection
 
+            // Developer Commands (DEBUG or TestFlight only)
+            if AppEnvironment.isDeveloperMode, let projectViewModel = projectViewModel {
+                developerSection(projectViewModel: projectViewModel)
+            }
+
             // Sign Out Section
             signOutSection
 
@@ -35,56 +97,12 @@ struct SettingsView: View {
             dangerZoneSection
         }
         .formStyle(.grouped)
-        .navigationTitle("Settings")
-        .sheet(isPresented: $showingChangePassword) {
-            ChangePasswordView(authViewModel: authViewModel) {
-                pendingLogout = true
-            }
-            #if os(iOS)
-            .presentationDetents([.medium, .large])
-            .presentationDragIndicator(.visible)
-            #endif
-        }
-        .sheet(isPresented: $showingDeleteAccount) {
-            DeleteAccountView(authViewModel: authViewModel) {
-                pendingLogout = true
-            }
-            #if os(iOS)
-            .presentationDetents([.medium])
-            .presentationDragIndicator(.visible)
-            #endif
-        }
-        .onChange(of: showingChangePassword) { _, isShowing in
-            if !isShowing && pendingLogout {
-                pendingLogout = false
-                authViewModel.forceLogout()
-            }
-        }
-        .onChange(of: showingDeleteAccount) { _, isShowing in
-            if !isShowing && pendingLogout {
-                pendingLogout = false
-                authViewModel.forceLogout()
-            }
-        }
-        .confirmationDialog(
-            "Sign Out",
-            isPresented: $showingLogoutConfirmation,
-            titleVisibility: .visible
-        ) {
-            Button("Sign Out", role: .destructive) {
-                Task {
-                    await authViewModel.logout()
-                }
-            }
-            Button("Cancel", role: .cancel) {}
-        } message: {
-            Text("Are you sure you want to sign out of your account?")
-        }
-        .alert("Error", isPresented: $authViewModel.showError) {
-            Button("OK", role: .cancel) {}
-        } message: {
-            Text(authViewModel.errorMessage ?? "An unexpected error occurred")
-        }
+        .scrollContentBackground(.hidden)
+        #if os(macOS)
+        .background(Color(nsColor: .windowBackgroundColor))
+        #else
+        .background(Color(.systemGroupedBackground).ignoresSafeArea())
+        #endif
     }
 
     // MARK: - Profile Section
@@ -215,6 +233,33 @@ struct SettingsView: View {
                 .textCase(.uppercase)
         } footer: {
             Text("Permanently delete your account and all associated data. Projects you own with no other members will be archived.")
+        }
+    }
+
+    // MARK: - Developer Section
+
+    @ViewBuilder
+    private func developerSection(projectViewModel: ProjectViewModel) -> some View {
+        Section {
+            Button {
+                showingDeveloperCommands = true
+            } label: {
+                SettingsRowView(
+                    icon: "hammer.fill",
+                    iconColor: .orange,
+                    title: "Developer Commands",
+                    showChevron: true
+                )
+            }
+            .buttonStyle(.plain)
+        } header: {
+            Label("Developer", systemImage: "wrench.and.screwdriver.fill")
+                .foregroundStyle(.orange)
+                .font(.footnote)
+                .fontWeight(.semibold)
+                .textCase(.uppercase)
+        } footer: {
+            Text(AppEnvironment.isDebug ? "DEBUG build detected" : "TestFlight build detected")
         }
     }
 

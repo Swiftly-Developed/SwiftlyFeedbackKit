@@ -1,0 +1,620 @@
+import SwiftUI
+
+// MARK: - View Mode
+
+enum FeedbackViewMode: String, CaseIterable {
+    case list
+    case kanban
+
+    var icon: String {
+        switch self {
+        case .list: return "list.bullet"
+        case .kanban: return "rectangle.3.group"
+        }
+    }
+
+    var label: String {
+        switch self {
+        case .list: return "List"
+        case .kanban: return "Kanban"
+        }
+    }
+}
+
+// MARK: - Main View
+
+struct FeedbackListView: View {
+    let project: Project
+    @Bindable var viewModel: FeedbackViewModel
+    @AppStorage("feedbackViewMode") private var viewMode: FeedbackViewMode = .list
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    @State private var selectedFeedbackId: UUID?
+
+    var body: some View {
+        feedbackListContent
+            .navigationTitle("Feedback")
+            .toolbar {
+                #if os(iOS)
+                ToolbarItem(placement: .topBarLeading) {
+                    viewModePicker
+                }
+                #else
+                ToolbarItem(placement: .automatic) {
+                    viewModePicker
+                }
+                #endif
+
+                ToolbarItem(placement: .primaryAction) {
+                    filterMenu
+                }
+            }
+            .searchable(text: $viewModel.searchText, prompt: "Search feedback...")
+            .task {
+                await viewModel.loadFeedbacks(projectId: project.id, apiKey: project.apiKey)
+            }
+            #if os(iOS)
+            .refreshable {
+                await viewModel.refreshFeedbacks()
+            }
+            #endif
+            .alert("Error", isPresented: $viewModel.showError) {
+                Button("OK", role: .cancel) {}
+            } message: {
+                Text(viewModel.errorMessage ?? "An error occurred")
+            }
+            .navigationDestination(for: Feedback.self) { feedback in
+                FeedbackDetailView(
+                    feedback: feedback,
+                    apiKey: project.apiKey,
+                    viewModel: viewModel
+                )
+            }
+    }
+
+    // MARK: - View Mode Picker
+
+    private var viewModePicker: some View {
+        Picker("View Mode", selection: $viewMode) {
+            ForEach(FeedbackViewMode.allCases, id: \.self) { mode in
+                Label(mode.label, systemImage: mode.icon)
+                    .tag(mode)
+            }
+        }
+        .pickerStyle(.segmented)
+        .labelsHidden()
+        #if os(iOS)
+        .frame(width: horizontalSizeClass == .compact ? 100 : 130)
+        #else
+        .frame(width: 130)
+        #endif
+    }
+
+    // MARK: - Filter Menu
+
+    private var filterMenu: some View {
+        Menu {
+            // Status filter
+            Menu {
+                Button {
+                    viewModel.statusFilter = nil
+                } label: {
+                    HStack {
+                        Text("All Statuses")
+                        Spacer()
+                        if viewModel.statusFilter == nil {
+                            Image(systemName: "checkmark")
+                        }
+                    }
+                }
+
+                Divider()
+
+                ForEach(FeedbackStatus.allCases, id: \.self) { status in
+                    Button {
+                        viewModel.statusFilter = status
+                    } label: {
+                        HStack {
+                            Text(status.displayName)
+                            Spacer()
+                            if viewModel.statusFilter == status {
+                                Image(systemName: "checkmark")
+                            }
+                        }
+                    }
+                }
+            } label: {
+                Label("Status", systemImage: "flag")
+            }
+
+            // Category filter
+            Menu {
+                Button {
+                    viewModel.categoryFilter = nil
+                } label: {
+                    HStack {
+                        Text("All Categories")
+                        Spacer()
+                        if viewModel.categoryFilter == nil {
+                            Image(systemName: "checkmark")
+                        }
+                    }
+                }
+
+                Divider()
+
+                ForEach(FeedbackCategory.allCases, id: \.self) { category in
+                    Button {
+                        viewModel.categoryFilter = category
+                    } label: {
+                        HStack {
+                            Text(category.displayName)
+                            Spacer()
+                            if viewModel.categoryFilter == category {
+                                Image(systemName: "checkmark")
+                            }
+                        }
+                    }
+                }
+            } label: {
+                Label("Category", systemImage: "tag")
+            }
+
+            if viewModel.statusFilter != nil || viewModel.categoryFilter != nil {
+                Divider()
+
+                Button(role: .destructive) {
+                    viewModel.clearFilters()
+                } label: {
+                    Label("Clear Filters", systemImage: "xmark.circle")
+                }
+            }
+        } label: {
+            Image(systemName: activeFiltersCount > 0 ? "line.3.horizontal.decrease.circle.fill" : "line.3.horizontal.decrease.circle")
+        }
+    }
+
+    private var activeFiltersCount: Int {
+        var count = 0
+        if viewModel.statusFilter != nil { count += 1 }
+        if viewModel.categoryFilter != nil { count += 1 }
+        return count
+    }
+
+    // MARK: - Content
+
+    @ViewBuilder
+    private var feedbackListContent: some View {
+        Group {
+            if viewModel.isLoading && viewModel.feedbacks.isEmpty {
+                ProgressView("Loading feedback...")
+            } else if viewModel.feedbacks.isEmpty {
+                emptyState
+            } else if viewModel.filteredFeedbacks.isEmpty {
+                noResultsState
+            } else {
+                switch viewMode {
+                case .list:
+                    listView
+                case .kanban:
+                    kanbanView
+                }
+            }
+        }
+    }
+
+    // MARK: - List View
+
+    private var listView: some View {
+        List {
+            ForEach(viewModel.filteredFeedbacks) { feedback in
+                NavigationLink(value: feedback) {
+                    FeedbackListRowView(feedback: feedback)
+                }
+                .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                    Button(role: .destructive) {
+                        Task {
+                            await viewModel.deleteFeedback(id: feedback.id)
+                        }
+                    } label: {
+                        Label("Delete", systemImage: "trash")
+                    }
+                }
+                .contextMenu {
+                    statusMenu(for: feedback)
+                    categoryMenu(for: feedback)
+                    Divider()
+                    Button(role: .destructive) {
+                        Task {
+                            await viewModel.deleteFeedback(id: feedback.id)
+                        }
+                    } label: {
+                        Label("Delete", systemImage: "trash")
+                    }
+                }
+            }
+        }
+        .listStyle(.plain)
+    }
+
+    // MARK: - Kanban View
+
+    private var kanbanView: some View {
+        ScrollView(.horizontal, showsIndicators: true) {
+            HStack(alignment: .top, spacing: 16) {
+                ForEach(FeedbackStatus.allCases, id: \.self) { status in
+                    KanbanColumnView(
+                        status: status,
+                        feedbacks: viewModel.feedbacksByStatus[status] ?? [],
+                        viewModel: viewModel,
+                        apiKey: project.apiKey
+                    )
+                }
+            }
+            .padding()
+        }
+        #if os(macOS)
+        .background(Color(nsColor: .windowBackgroundColor))
+        #else
+        .background(Color(.systemGroupedBackground))
+        #endif
+    }
+
+    // MARK: - Context Menus
+
+    private func statusMenu(for feedback: Feedback) -> some View {
+        Menu {
+            ForEach(FeedbackStatus.allCases, id: \.self) { status in
+                Button {
+                    Task {
+                        await viewModel.updateFeedbackStatus(id: feedback.id, status: status)
+                    }
+                } label: {
+                    HStack {
+                        Text(status.displayName)
+                        Spacer()
+                        if feedback.status == status {
+                            Image(systemName: "checkmark")
+                        }
+                    }
+                }
+            }
+        } label: {
+            Label("Set Status", systemImage: "flag")
+        }
+    }
+
+    private func categoryMenu(for feedback: Feedback) -> some View {
+        Menu {
+            ForEach(FeedbackCategory.allCases, id: \.self) { category in
+                Button {
+                    Task {
+                        await viewModel.updateFeedbackCategory(id: feedback.id, category: category)
+                    }
+                } label: {
+                    HStack {
+                        Text(category.displayName)
+                        Spacer()
+                        if feedback.category == category {
+                            Image(systemName: "checkmark")
+                        }
+                    }
+                }
+            }
+        } label: {
+            Label("Set Category", systemImage: "tag")
+        }
+    }
+
+    // MARK: - Empty States
+
+    private var emptyState: some View {
+        ContentUnavailableView {
+            Label("No Feedback", systemImage: "bubble.left.and.bubble.right")
+        } description: {
+            Text("No feedback has been submitted for this project yet.")
+        }
+    }
+
+    private var noResultsState: some View {
+        ContentUnavailableView {
+            Label("No Results", systemImage: "magnifyingglass")
+        } description: {
+            Text("No feedback matches your current filters.")
+        } actions: {
+            Button("Clear Filters") {
+                viewModel.clearFilters()
+            }
+            .buttonStyle(.bordered)
+        }
+    }
+}
+
+// MARK: - List Row View
+
+struct FeedbackListRowView: View {
+    let feedback: Feedback
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 8) {
+                FeedbackStatusBadge(status: feedback.status)
+                FeedbackCategoryBadge(category: feedback.category)
+                Spacer()
+                HStack(spacing: 4) {
+                    Image(systemName: "arrow.up")
+                        .font(.caption)
+                    Text("\(feedback.voteCount)")
+                        .font(.caption)
+                        .fontWeight(.medium)
+                }
+                .foregroundStyle(.secondary)
+            }
+
+            Text(feedback.title)
+                .font(.body)
+                .fontWeight(.medium)
+                .lineLimit(1)
+
+            Text(feedback.description)
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+                .lineLimit(2)
+
+            HStack(spacing: 12) {
+                if let email = feedback.userEmail {
+                    Label(email, systemImage: "person")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                }
+
+                Spacer()
+
+                if feedback.commentCount > 0 {
+                    Label("\(feedback.commentCount)", systemImage: "bubble.left")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+
+                if let date = feedback.createdAt {
+                    Text(date, style: .relative)
+                        .font(.caption)
+                        .foregroundStyle(.tertiary)
+                }
+            }
+        }
+        .padding(.vertical, 4)
+    }
+}
+
+// MARK: - Kanban Column View
+
+struct KanbanColumnView: View {
+    let status: FeedbackStatus
+    let feedbacks: [Feedback]
+    @Bindable var viewModel: FeedbackViewModel
+    let apiKey: String
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            // Column Header
+            HStack {
+                Image(systemName: status.icon)
+                    .foregroundStyle(statusColor)
+                Text(status.displayName)
+                    .fontWeight(.semibold)
+                Spacer()
+                Text("\(feedbacks.count)")
+                    .font(.caption)
+                    .fontWeight(.medium)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 2)
+                    .background(statusColor.opacity(0.15))
+                    .foregroundStyle(statusColor)
+                    .clipShape(Capsule())
+            }
+            .padding()
+            #if os(macOS)
+            .background(Color(nsColor: .controlBackgroundColor))
+            #else
+            .background(Color(.systemGray6))
+            #endif
+
+            Divider()
+
+            // Cards
+            ScrollView {
+                LazyVStack(spacing: 8) {
+                    ForEach(feedbacks) { feedback in
+                        NavigationLink(value: feedback) {
+                            KanbanCardView(
+                                feedback: feedback,
+                                viewModel: viewModel
+                            )
+                        }
+                        .buttonStyle(.plain)
+                        .draggable(feedback.id.uuidString)
+                    }
+                }
+                .padding(8)
+            }
+        }
+        #if os(macOS)
+        .background(Color(nsColor: .textBackgroundColor))
+        #else
+        .background(Color(.systemBackground))
+        #endif
+        .clipShape(RoundedRectangle(cornerRadius: 12))
+        .shadow(color: .black.opacity(0.05), radius: 4, x: 0, y: 2)
+        .frame(width: 300)
+        .dropDestination(for: String.self) { items, _ in
+            guard let feedbackIdString = items.first,
+                  let feedbackId = UUID(uuidString: feedbackIdString) else {
+                return false
+            }
+            Task {
+                await viewModel.updateFeedbackStatus(id: feedbackId, status: status)
+            }
+            return true
+        }
+    }
+
+    private var statusColor: Color {
+        switch status {
+        case .pending: return .gray
+        case .approved: return .blue
+        case .inProgress: return .orange
+        case .completed: return .green
+        case .rejected: return .red
+        }
+    }
+}
+
+// MARK: - Kanban Card View
+
+struct KanbanCardView: View {
+    let feedback: Feedback
+    @Bindable var viewModel: FeedbackViewModel
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                FeedbackCategoryBadge(category: feedback.category)
+                Spacer()
+                HStack(spacing: 4) {
+                    Image(systemName: "arrow.up")
+                        .font(.caption2)
+                    Text("\(feedback.voteCount)")
+                        .font(.caption2)
+                        .fontWeight(.medium)
+                }
+                .foregroundStyle(.secondary)
+            }
+
+            Text(feedback.title)
+                .font(.subheadline)
+                .fontWeight(.medium)
+                .lineLimit(2)
+                .multilineTextAlignment(.leading)
+
+            Text(feedback.description)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .lineLimit(2)
+                .multilineTextAlignment(.leading)
+
+            HStack {
+                if let email = feedback.userEmail {
+                    Text(email)
+                        .font(.caption2)
+                        .foregroundStyle(.tertiary)
+                        .lineLimit(1)
+                }
+                Spacer()
+                if feedback.commentCount > 0 {
+                    HStack(spacing: 2) {
+                        Image(systemName: "bubble.left")
+                            .font(.caption2)
+                        Text("\(feedback.commentCount)")
+                            .font(.caption2)
+                    }
+                    .foregroundStyle(.secondary)
+                }
+            }
+        }
+        .padding(12)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        #if os(macOS)
+        .background(Color(nsColor: .controlBackgroundColor))
+        #else
+        .background(Color(.secondarySystemGroupedBackground))
+        #endif
+        .clipShape(RoundedRectangle(cornerRadius: 8))
+        .shadow(color: .black.opacity(0.05), radius: 2, x: 0, y: 1)
+    }
+}
+
+// MARK: - Status Badge
+
+struct FeedbackStatusBadge: View {
+    let status: FeedbackStatus
+
+    var body: some View {
+        HStack(spacing: 4) {
+            Image(systemName: status.icon)
+                .font(.caption2)
+            Text(status.displayName)
+                .font(.caption2)
+                .fontWeight(.medium)
+        }
+        .padding(.horizontal, 6)
+        .padding(.vertical, 3)
+        .background(statusColor.opacity(0.15))
+        .foregroundStyle(statusColor)
+        .clipShape(Capsule())
+    }
+
+    private var statusColor: Color {
+        switch status {
+        case .pending: return .gray
+        case .approved: return .blue
+        case .inProgress: return .orange
+        case .completed: return .green
+        case .rejected: return .red
+        }
+    }
+}
+
+// MARK: - Category Badge
+
+struct FeedbackCategoryBadge: View {
+    let category: FeedbackCategory
+
+    var body: some View {
+        HStack(spacing: 4) {
+            Image(systemName: category.icon)
+                .font(.caption2)
+            Text(category.displayName)
+                .font(.caption2)
+                .fontWeight(.medium)
+        }
+        .padding(.horizontal, 6)
+        .padding(.vertical, 3)
+        .background(categoryColor.opacity(0.15))
+        .foregroundStyle(categoryColor)
+        .clipShape(Capsule())
+    }
+
+    private var categoryColor: Color {
+        switch category {
+        case .featureRequest: return .purple
+        case .bugReport: return .red
+        case .improvement: return .teal
+        case .other: return .gray
+        }
+    }
+}
+
+// MARK: - Preview
+
+#Preview("List View") {
+    NavigationStack {
+        FeedbackListView(
+            project: Project(
+                id: UUID(),
+                name: "Test Project",
+                apiKey: "test-key",
+                description: nil,
+                ownerId: UUID(),
+                ownerEmail: nil,
+                isArchived: false,
+                archivedAt: nil,
+                feedbackCount: 0,
+                memberCount: 1,
+                createdAt: Date(),
+                updatedAt: Date()
+            ),
+            viewModel: FeedbackViewModel()
+        )
+    }
+}

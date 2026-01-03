@@ -3,6 +3,17 @@ import Fluent
 import FluentPostgresDriver
 
 func configure(_ app: Application) async throws {
+    // Configure JSON encoding/decoding to use snake_case
+    let encoder = JSONEncoder()
+    encoder.keyEncodingStrategy = .convertToSnakeCase
+    encoder.dateEncodingStrategy = .iso8601
+    ContentConfiguration.global.use(encoder: encoder, for: .json)
+
+    let decoder = JSONDecoder()
+    decoder.keyDecodingStrategy = .convertFromSnakeCase
+    decoder.dateDecodingStrategy = .iso8601
+    ContentConfiguration.global.use(decoder: decoder, for: .json)
+
     // Database configuration - PostgreSQL
     let hostname = Environment.get("DATABASE_HOST") ?? "localhost"
     let port = Environment.get("DATABASE_PORT").flatMap(Int.init) ?? 5432

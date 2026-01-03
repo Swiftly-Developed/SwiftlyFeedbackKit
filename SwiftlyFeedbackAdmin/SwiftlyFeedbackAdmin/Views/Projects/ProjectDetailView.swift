@@ -12,6 +12,8 @@ struct ProjectDetailView: View {
     @State private var showingMembersSheet = false
     @State private var showingEditSheet = false
     @State private var copiedToClipboard = false
+    @State private var navigateToFeedback = false
+    @State private var feedbackViewModel = FeedbackViewModel()
 
     private var isCompact: Bool {
         #if os(macOS)
@@ -143,6 +145,11 @@ struct ProjectDetailView: View {
                     #if os(macOS)
                     .frame(minWidth: 400, minHeight: 200)
                     #endif
+            }
+        }
+        .navigationDestination(isPresented: $navigateToFeedback) {
+            if let project = viewModel.selectedProject {
+                FeedbackListView(project: project, viewModel: feedbackViewModel)
             }
         }
     }
@@ -303,12 +310,18 @@ struct ProjectDetailView: View {
             : [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())]
 
         return LazyVGrid(columns: columns, spacing: 12) {
-            StatCard(
-                icon: "bubble.left.and.bubble.right.fill",
-                iconColor: .blue,
-                title: "Feedback",
-                value: "\(project.feedbackCount)"
-            )
+            Button {
+                navigateToFeedback = true
+            } label: {
+                StatCard(
+                    icon: "bubble.left.and.bubble.right.fill",
+                    iconColor: .blue,
+                    title: "Feedback",
+                    value: "\(project.feedbackCount)",
+                    showChevron: true
+                )
+            }
+            .buttonStyle(.plain)
 
             StatCard(
                 icon: "person.2.fill",
@@ -370,8 +383,20 @@ struct ProjectDetailView: View {
     private func quickActionsSection(_ project: Project) -> some View {
         VStack(spacing: 0) {
             QuickActionButton(
-                icon: "pencil",
+                icon: "bubble.left.and.bubble.right",
                 iconColor: .blue,
+                title: "View Feedback",
+                subtitle: "\(project.feedbackCount) submissions"
+            ) {
+                navigateToFeedback = true
+            }
+
+            Divider()
+                .padding(.leading, 56)
+
+            QuickActionButton(
+                icon: "pencil",
+                iconColor: .indigo,
                 title: "Edit Project",
                 subtitle: "Change name and description"
             ) {
@@ -448,25 +473,36 @@ struct StatCard: View {
     let iconColor: Color
     let title: String
     let value: String
+    var showChevron: Bool = false
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Image(systemName: icon)
-                .font(.system(size: 16, weight: .semibold))
-                .foregroundStyle(.white)
-                .frame(width: 32, height: 32)
-                .background(iconColor, in: RoundedRectangle(cornerRadius: 8))
+        HStack {
+            VStack(alignment: .leading, spacing: 8) {
+                Image(systemName: icon)
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundStyle(.white)
+                    .frame(width: 32, height: 32)
+                    .background(iconColor, in: RoundedRectangle(cornerRadius: 8))
 
-            VStack(alignment: .leading, spacing: 2) {
-                Text(value)
-                    .font(.headline)
-                    .foregroundStyle(.primary)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.8)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(value)
+                        .font(.headline)
+                        .foregroundStyle(.primary)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.8)
 
-                Text(title)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                    Text(title)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
+
+            Spacer()
+
+            if showChevron {
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(.tertiary)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)

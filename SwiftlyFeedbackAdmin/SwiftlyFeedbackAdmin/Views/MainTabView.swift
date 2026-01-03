@@ -13,15 +13,26 @@ struct MainTabView: View {
             }
         #else
         TabView {
-            ProjectListView(viewModel: projectViewModel)
-                .tabItem {
-                    Label("Projects", systemImage: "folder")
-                }
+            NavigationStack {
+                ProjectListView(viewModel: projectViewModel)
+            }
+            .tabItem {
+                Label("Projects", systemImage: "folder")
+            }
 
-            SettingsView(authViewModel: authViewModel)
-                .tabItem {
-                    Label("Settings", systemImage: "gear")
-                }
+            NavigationStack {
+                FeedbackDashboardView(projectViewModel: projectViewModel)
+            }
+            .tabItem {
+                Label("Feedback", systemImage: "bubble.left.and.bubble.right")
+            }
+
+            NavigationStack {
+                SettingsView(authViewModel: authViewModel, projectViewModel: projectViewModel)
+            }
+            .tabItem {
+                Label("Settings", systemImage: "gear")
+            }
         }
         .task {
             await loadProjectsOnce()
@@ -46,6 +57,7 @@ struct MacNavigationView: View {
 
     enum SidebarSection: String, CaseIterable, Identifiable {
         case projects = "Projects"
+        case feedback = "Feedback"
         case settings = "Settings"
 
         var id: String { rawValue }
@@ -53,6 +65,7 @@ struct MacNavigationView: View {
         var icon: String {
             switch self {
             case .projects: return "folder"
+            case .feedback: return "bubble.left.and.bubble.right"
             case .settings: return "gear"
             }
         }
@@ -65,18 +78,24 @@ struct MacNavigationView: View {
                     .tag(section)
             }
             .listStyle(.sidebar)
+            .navigationTitle("SwiftlyFeedback")
             .navigationSplitViewColumnWidth(min: 180, ideal: 200, max: 250)
-            .toolbar(removing: .sidebarToggle)
         } detail: {
-            NavigationStack {
-                switch selectedSection {
-                case .projects:
+            switch selectedSection {
+            case .projects:
+                NavigationStack {
                     ProjectListView(viewModel: projectViewModel)
-                case .settings:
-                    SettingsView(authViewModel: authViewModel)
-                case nil:
-                    ContentUnavailableView("Select a Section", systemImage: "sidebar.left", description: Text("Choose a section from the sidebar"))
                 }
+            case .feedback:
+                NavigationStack {
+                    FeedbackDashboardView(projectViewModel: projectViewModel)
+                }
+            case .settings:
+                NavigationStack {
+                    SettingsView(authViewModel: authViewModel, projectViewModel: projectViewModel)
+                }
+            case nil:
+                ContentUnavailableView("Select a Section", systemImage: "sidebar.left", description: Text("Choose a section from the sidebar"))
             }
         }
     }

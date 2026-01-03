@@ -19,10 +19,12 @@ SwiftlyFeedbackAdmin/
 ├── SwiftlyFeedbackAdminApp.swift   # App entry point
 ├── Models/
 │   ├── AuthModels.swift            # User, token models
-│   └── ProjectModels.swift         # Project, member models
+│   ├── ProjectModels.swift         # Project, member models
+│   └── FeedbackModels.swift        # Feedback, Comment models, DTOs
 ├── ViewModels/
 │   ├── AuthViewModel.swift         # Authentication state
-│   └── ProjectViewModel.swift      # Project management state
+│   ├── ProjectViewModel.swift      # Project management state
+│   └── FeedbackViewModel.swift     # Feedback management state
 ├── Views/
 │   ├── RootView.swift              # Root navigation
 │   ├── MainTabView.swift           # Tab bar navigation
@@ -37,8 +39,13 @@ SwiftlyFeedbackAdmin/
 │   │   ├── CreateProjectView.swift    # Create new project sheet
 │   │   ├── ProjectMembersView.swift   # Manage members
 │   │   └── AcceptInviteView.swift     # Accept project invite
+│   ├── Feedback/
+│   │   ├── FeedbackDashboardView.swift # Dashboard with List/Kanban views
+│   │   ├── FeedbackListView.swift      # Feedback list with row view
+│   │   └── FeedbackDetailView.swift    # Feedback detail with comments
 │   └── Settings/
-│       └── SettingsView.swift      # App settings
+│       ├── SettingsView.swift          # App settings
+│       └── DeveloperCommandsView.swift # Dev tools (DEBUG/TestFlight only)
 └── Services/
     ├── AdminAPIClient.swift        # API client for admin endpoints
     ├── AuthService.swift           # Authentication logic
@@ -86,3 +93,42 @@ The `ProjectListView` supports three view modes (persisted via `@AppStorage`):
 - Use `#if os(iOS)` for iOS-only modifiers like `.textInputAutocapitalization`
 - Use `.presentationDetents` on iOS for sheet sizing
 - Use `.frame(minWidth:minHeight:)` on macOS for window sizing
+- For `ScrollView` backgrounds that need to extend under navigation bars, use `.ignoresSafeArea()` on iOS
+
+## macOS Navigation
+
+The macOS app uses `NavigationSplitView` with a sidebar (`MainTabView.swift`):
+
+- Sidebar has `.navigationTitle("SwiftlyFeedback")` for proper top area rendering
+- Each detail section has its own `NavigationStack` for consistent title styling
+- Detail views provide their own `.navigationTitle()` (e.g., "Projects", "Feedback", "Settings")
+
+## Feedback Dashboard
+
+The `FeedbackDashboardView` provides a dedicated tab for managing feedback across all projects:
+
+### View Modes (persisted via `@AppStorage`)
+
+| Mode | Icon | Description |
+|------|------|-------------|
+| List | `list.bullet` | Traditional list with swipe actions and context menus |
+| Kanban | `rectangle.3.group` | Drag-and-drop columns by status (Pending, Approved, In Progress, Completed, Rejected) |
+
+### Features
+- Project picker in toolbar to switch between projects
+- Search feedback by title, description, or user email
+- Filter by status and/or category
+- Update status via context menu, swipe actions, or drag-and-drop (Kanban)
+- View feedback details and manage comments
+
+## Developer Commands (DEBUG/TestFlight only)
+
+`DeveloperCommandsView` is available in Settings when running in DEBUG or TestFlight builds:
+
+- **Generate Dummy Projects**: Create test projects with random names
+- **Generate Dummy Feedback**: Add test feedback items to a project
+- **Generate Dummy Comments**: Add test comments to existing feedback
+- **Clear All Feedback**: Delete all feedback for a project
+- **Delete All My Projects**: Remove all projects owned by the user
+
+Controlled by `AppEnvironment.isDeveloperMode` which checks for DEBUG builds or TestFlight sandbox receipt.

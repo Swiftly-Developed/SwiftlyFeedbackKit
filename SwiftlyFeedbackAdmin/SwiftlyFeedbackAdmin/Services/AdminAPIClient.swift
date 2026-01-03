@@ -174,6 +174,179 @@ actor AdminAPIClient {
         logger.info("✅ DELETE \(path) - completed")
     }
 
+    // MARK: - Feedback API (uses X-API-Key)
+
+    func getFeedbacks(apiKey: String, status: FeedbackStatus? = nil, category: FeedbackCategory? = nil) async throws -> [Feedback] {
+        var path = "feedbacks"
+        var queryParams: [String] = []
+
+        if let status = status {
+            queryParams.append("status=\(status.rawValue)")
+        }
+        if let category = category {
+            queryParams.append("category=\(category.rawValue)")
+        }
+
+        if !queryParams.isEmpty {
+            path += "?" + queryParams.joined(separator: "&")
+        }
+
+        logger.info("🔵 GET \(path) (with API key)")
+        let (data, response) = try await makeRequestWithApiKey(path: path, method: "GET", apiKey: apiKey)
+        try validateResponse(response, data: data, path: path)
+
+        do {
+            let decoded = try decoder.decode([Feedback].self, from: data)
+            logger.info("✅ GET \(path) - decoded \(decoded.count) feedbacks")
+            return decoded
+        } catch {
+            logger.error("❌ GET \(path) - decoding failed: \(error.localizedDescription)")
+            throw APIError.decodingError(error)
+        }
+    }
+
+    func getFeedback(id: UUID, apiKey: String) async throws -> Feedback {
+        let path = "feedbacks/\(id)"
+        logger.info("🔵 GET \(path) (with API key)")
+        let (data, response) = try await makeRequestWithApiKey(path: path, method: "GET", apiKey: apiKey)
+        try validateResponse(response, data: data, path: path)
+
+        do {
+            let decoded = try decoder.decode(Feedback.self, from: data)
+            logger.info("✅ GET \(path) - decoded successfully")
+            return decoded
+        } catch {
+            logger.error("❌ GET \(path) - decoding failed: \(error.localizedDescription)")
+            throw APIError.decodingError(error)
+        }
+    }
+
+    func getComments(feedbackId: UUID, apiKey: String) async throws -> [Comment] {
+        let path = "feedbacks/\(feedbackId)/comments"
+        logger.info("🔵 GET \(path) (with API key)")
+        let (data, response) = try await makeRequestWithApiKey(path: path, method: "GET", apiKey: apiKey)
+        try validateResponse(response, data: data, path: path)
+
+        do {
+            let decoded = try decoder.decode([Comment].self, from: data)
+            logger.info("✅ GET \(path) - decoded \(decoded.count) comments")
+            return decoded
+        } catch {
+            logger.error("❌ GET \(path) - decoding failed: \(error.localizedDescription)")
+            throw APIError.decodingError(error)
+        }
+    }
+
+    func createComment(feedbackId: UUID, content: String, userId: String, isAdmin: Bool, apiKey: String) async throws -> Comment {
+        let path = "feedbacks/\(feedbackId)/comments"
+        let body = CreateCommentRequest(content: content, userId: userId, isAdmin: isAdmin)
+
+        logger.info("🟢 POST \(path) (with API key)")
+        let (data, response) = try await makeRequestWithApiKey(path: path, method: "POST", body: body, apiKey: apiKey)
+        try validateResponse(response, data: data, path: path)
+
+        do {
+            let decoded = try decoder.decode(Comment.self, from: data)
+            logger.info("✅ POST \(path) - decoded successfully")
+            return decoded
+        } catch {
+            logger.error("❌ POST \(path) - decoding failed: \(error.localizedDescription)")
+            throw APIError.decodingError(error)
+        }
+    }
+
+    func deleteComment(feedbackId: UUID, commentId: UUID, apiKey: String) async throws {
+        let path = "feedbacks/\(feedbackId)/comments/\(commentId)"
+        logger.info("🔴 DELETE \(path) (with API key)")
+        let (data, response) = try await makeRequestWithApiKey(path: path, method: "DELETE", apiKey: apiKey)
+        try validateResponse(response, data: data, path: path)
+        logger.info("✅ DELETE \(path) - completed")
+    }
+
+    func createFeedback(
+        title: String,
+        description: String,
+        category: FeedbackCategory,
+        userId: String,
+        userEmail: String?,
+        apiKey: String
+    ) async throws -> Feedback {
+        let path = "feedbacks"
+        let body = CreateFeedbackRequest(
+            title: title,
+            description: description,
+            category: category,
+            userId: userId,
+            userEmail: userEmail
+        )
+
+        logger.info("🟢 POST \(path) (with API key)")
+        let (data, response) = try await makeRequestWithApiKey(path: path, method: "POST", body: body, apiKey: apiKey)
+        try validateResponse(response, data: data, path: path)
+
+        do {
+            let decoded = try decoder.decode(Feedback.self, from: data)
+            logger.info("✅ POST \(path) - decoded successfully")
+            return decoded
+        } catch {
+            logger.error("❌ POST \(path) - decoding failed: \(error.localizedDescription)")
+            throw APIError.decodingError(error)
+        }
+    }
+
+    private func makeRequestWithApiKey(
+        path: String,
+        method: String,
+        body: (any Encodable)? = nil,
+        apiKey: String
+    ) async throws -> (Data, URLResponse) {
+        let url = baseURL.appendingPathComponent(path)
+        var request = URLRequest(url: url)
+        request.httpMethod = method
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue(apiKey, forHTTPHeaderField: "X-API-Key")
+
+        logger.info("📤 Request: \(method) \(url.absoluteString) (API key)")
+
+        if let body = body {
+            do {
+                let bodyData = try encoder.encode(body)
+                request.httpBody = bodyData
+                if let bodyString = String(data: bodyData, encoding: .utf8) {
+                    logger.debug("📦 Request body: \(bodyString)")
+                }
+            } catch {
+                logger.error("❌ Failed to encode request body: \(error.localizedDescription)")
+                throw error
+            }
+        }
+
+        do {
+            logger.info("🌐 Sending request to \(url.absoluteString)...")
+            let (data, response) = try await session.data(for: request)
+
+            if let httpResponse = response as? HTTPURLResponse {
+                logger.info("📥 Response: \(httpResponse.statusCode) for \(method) \(path)")
+
+                if let responseString = String(data: data, encoding: .utf8) {
+                    if data.count < 1000 {
+                        logger.debug("📄 Response body: \(responseString)")
+                    } else {
+                        logger.debug("📄 Response body (truncated): \(responseString.prefix(500))...")
+                    }
+                }
+            }
+
+            return (data, response)
+        } catch let error as URLError {
+            logger.error("❌ URLError: \(error.code.rawValue) - \(error.localizedDescription)")
+            throw APIError.networkError(error)
+        } catch {
+            logger.error("❌ Network error: \(error.localizedDescription)")
+            throw APIError.networkError(error)
+        }
+    }
+
     private func validateResponse(_ response: URLResponse, data: Data, path: String) throws {
         guard let httpResponse = response as? HTTPURLResponse else {
             logger.error("❌ \(path) - Invalid response (not HTTPURLResponse)")
