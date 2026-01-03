@@ -23,10 +23,13 @@ swift test
 ```
 Sources/SwiftlyFeedbackKit/
 ├── SwiftlyFeedback.swift     # Main SDK entry point & configuration
+├── Configuration/
+│   └── Config.swift          # SDK configuration options
 ├── Models/
 │   ├── Feedback.swift        # Feedback model
 │   ├── Comment.swift         # Comment model
-│   └── VoteResult.swift      # Vote result model
+│   ├── VoteResult.swift      # Vote result model
+│   └── ViewEvent.swift       # View event model & predefined types
 ├── Networking/
 │   ├── APIClient.swift       # HTTP client for API calls
 │   └── SwiftlyFeedbackError.swift  # Error types
@@ -58,6 +61,18 @@ FeedbackDetailView(feedback: someFeedback)
 let feedback = try await SwiftlyFeedback.shared?.getFeedback()
 try await SwiftlyFeedback.shared?.submitFeedback(title: "...", description: "...")
 try await SwiftlyFeedback.shared?.vote(for: feedbackId)
+
+// Track custom view events (any event name)
+SwiftlyFeedback.view("onboarding_step_1")
+SwiftlyFeedback.view("purchase_completed", properties: ["amount": "9.99"])
+
+// Predefined views (automatically tracked when views appear)
+SwiftlyFeedback.view(.feedbackList)
+SwiftlyFeedback.view(.feedbackDetail)
+SwiftlyFeedback.view(.submitFeedback)
+
+// Disable automatic view tracking
+SwiftlyFeedback.config.enableAutomaticViewTracking = false
 ```
 
 ## Code Patterns

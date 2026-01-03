@@ -63,6 +63,11 @@ public struct FeedbackListView: View {
             .task {
                 await viewModel.loadFeedback()
             }
+            .onAppear {
+                if SwiftlyFeedback.config.enableAutomaticViewTracking {
+                    SwiftlyFeedback.view(.feedbackList)
+                }
+            }
             .alert(String(localized: Strings.errorTitle), isPresented: $viewModel.showingError) {
                 Button(String(localized: Strings.errorOK), role: .cancel) {}
             } message: {

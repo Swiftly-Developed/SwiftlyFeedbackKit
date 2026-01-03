@@ -37,6 +37,15 @@ import Foundation
 /// SwiftlyFeedback.updateUser(customID: "user_123")
 /// SwiftlyFeedback.updateUser(payment: .monthly(9.99))
 /// ```
+///
+/// ## View Tracking
+///
+/// Track custom events and views:
+///
+/// ```swift
+/// SwiftlyFeedback.view("feature_details", properties: ["id": "abc123"])
+/// SwiftlyFeedback.view(.feedbackList)
+/// ```
 public final class SwiftlyFeedback: @unchecked Sendable {
 
     // MARK: - Static Properties
@@ -291,6 +300,47 @@ public final class SwiftlyFeedback: @unchecked Sendable {
         let body = CreateCommentRequest(content: content, userId: userId, isAdmin: nil)
         return try await client.post(path: "feedbacks/\(feedbackId)/comments", body: body)
     }
+
+    // MARK: - View Tracking
+
+    /// Track a custom view or event.
+    ///
+    /// ```swift
+    /// SwiftlyFeedback.view("feature_details", properties: ["id": "abc123"])
+    /// ```
+    ///
+    /// - Parameters:
+    ///   - name: The name of the view/event to track
+    ///   - properties: Optional key-value properties for additional context
+    public static func view(_ name: String, properties: [String: String]? = nil) {
+        Task {
+            await shared?.trackView(name: name, properties: properties)
+        }
+    }
+
+    /// Track a predefined SDK view.
+    ///
+    /// ```swift
+    /// SwiftlyFeedback.view(.feedbackList)
+    /// ```
+    ///
+    /// - Parameters:
+    ///   - predefined: The predefined view to track
+    ///   - properties: Optional key-value properties for additional context
+    public static func view(_ predefined: PredefinedView, properties: [String: String]? = nil) {
+        view(predefined.rawValue, properties: properties)
+    }
+
+    /// Internal method to track a view event.
+    internal func trackView(name: String, properties: [String: String]?) async {
+        do {
+            let body = TrackViewEventRequest(eventName: name, userId: userId, properties: properties)
+            let _: ViewEventResponse = try await client.post(path: "events/track", body: body)
+        } catch {
+            // Silently fail - view tracking is not critical
+            print("SwiftlyFeedback: Failed to track view '\(name)': \(error)")
+        }
+    }
 }
 
 // MARK: - Request Models
@@ -321,4 +371,10 @@ private struct RegisterUserRequest: Encodable {
 private struct RegisterUserResponse: Decodable {
     let userId: String
     let mrr: Double?
+}
+
+private struct TrackViewEventRequest: Encodable {
+    let eventName: String
+    let userId: String
+    let properties: [String: String]?
 }

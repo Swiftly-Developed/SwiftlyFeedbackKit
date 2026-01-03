@@ -37,6 +37,11 @@ public struct FeedbackDetailView: View {
                 await viewModel.loadComments()
             }
         }
+        .onAppear {
+            if SwiftlyFeedback.config.enableAutomaticViewTracking {
+                SwiftlyFeedback.view(.feedbackDetail, properties: ["feedbackId": feedback.id.uuidString])
+            }
+        }
         .alert(String(localized: Strings.errorTitle), isPresented: $viewModel.showingError) {
             Button(String(localized: Strings.errorOK), role: .cancel) {}
         } message: {

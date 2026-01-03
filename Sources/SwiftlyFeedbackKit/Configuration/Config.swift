@@ -43,6 +43,11 @@ public final class SwiftlyFeedbackConfiguration: @unchecked Sendable {
     /// Show email field in submit feedback form. Default: `true`
     public var showEmailField: Bool = true
 
+    // MARK: - Analytics
+
+    /// Enable automatic view tracking for SDK views. Default: `true`
+    public var enableAutomaticViewTracking: Bool = true
+
     // MARK: - Buttons Configuration
 
     /// Button configuration options

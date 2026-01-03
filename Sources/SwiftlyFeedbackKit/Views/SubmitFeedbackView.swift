@@ -85,6 +85,11 @@ public struct SubmitFeedbackView: View {
                         .clipShape(.rect(cornerRadius: 12))
                 }
             }
+            .onAppear {
+                if SwiftlyFeedback.config.enableAutomaticViewTracking {
+                    SwiftlyFeedback.view(.submitFeedback)
+                }
+            }
         }
     }
 }
