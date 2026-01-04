@@ -81,6 +81,9 @@ SwiftlyFeedback.config.enableAutomaticViewTracking = false
 - All models are `Codable`, `Sendable`, and `Equatable`
 - Use `Identifiable` for SwiftUI list compatibility
 - `FeedbackStatus.canVote` - Returns `false` for `completed`/`rejected` statuses
+- `Feedback.mergedIntoId` - Points to primary feedback if this item was merged
+- `Feedback.isMerged` - Computed property to check if feedback was merged
+- `Feedback.mergedFeedbackIds` - Array of IDs merged into this feedback (for primary)
 
 ### Networking
 - All API calls use async/await
