@@ -22,6 +22,12 @@ final class User: Model, Content, @unchecked Sendable {
     @Field(key: "is_email_verified")
     var isEmailVerified: Bool
 
+    @Field(key: "notify_new_feedback")
+    var notifyNewFeedback: Bool
+
+    @Field(key: "notify_new_comments")
+    var notifyNewComments: Bool
+
     @Timestamp(key: "created_at", on: .create)
     var createdAt: Date?
 
@@ -36,13 +42,24 @@ final class User: Model, Content, @unchecked Sendable {
 
     init() {}
 
-    init(id: UUID? = nil, email: String, name: String, passwordHash: String, isAdmin: Bool = false, isEmailVerified: Bool = false) {
+    init(
+        id: UUID? = nil,
+        email: String,
+        name: String,
+        passwordHash: String,
+        isAdmin: Bool = false,
+        isEmailVerified: Bool = false,
+        notifyNewFeedback: Bool = true,
+        notifyNewComments: Bool = true
+    ) {
         self.id = id
         self.email = email
         self.name = name
         self.passwordHash = passwordHash
         self.isAdmin = isAdmin
         self.isEmailVerified = isEmailVerified
+        self.notifyNewFeedback = notifyNewFeedback
+        self.notifyNewComments = notifyNewComments
     }
 }
 
@@ -75,6 +92,8 @@ extension User {
         let name: String
         let isAdmin: Bool
         let isEmailVerified: Bool
+        let notifyNewFeedback: Bool
+        let notifyNewComments: Bool
         let createdAt: Date?
     }
 
@@ -85,6 +104,8 @@ extension User {
             name: name,
             isAdmin: isAdmin,
             isEmailVerified: isEmailVerified,
+            notifyNewFeedback: notifyNewFeedback,
+            notifyNewComments: notifyNewComments,
             createdAt: createdAt
         )
     }

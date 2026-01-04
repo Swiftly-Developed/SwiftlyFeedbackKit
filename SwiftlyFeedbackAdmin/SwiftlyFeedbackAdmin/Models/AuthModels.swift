@@ -6,6 +6,8 @@ struct User: Codable, Identifiable, Sendable {
     let name: String
     let isAdmin: Bool
     let isEmailVerified: Bool
+    let notifyNewFeedback: Bool
+    let notifyNewComments: Bool
     let createdAt: Date?
 }
 
@@ -45,4 +47,9 @@ struct VerifyEmailResponse: Decodable {
 
 struct MessageResponse: Decodable {
     let message: String
+}
+
+struct UpdateNotificationSettingsRequest: Encodable {
+    let notifyNewFeedback: Bool?
+    let notifyNewComments: Bool?
 }

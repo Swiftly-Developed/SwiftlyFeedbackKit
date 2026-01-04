@@ -9,11 +9,56 @@ import SwiftUI
 import SwiftlyFeedbackKit
 
 struct ContentView: View {
+    var settings: AppSettings
+
     var body: some View {
-        FeedbackListView()
+        #if os(macOS)
+        NavigationSplitView {
+            List {
+                NavigationLink {
+                    HomeView()
+                } label: {
+                    Label("Home", systemImage: "house.fill")
+                }
+
+                NavigationLink {
+                    FeedbackListView()
+                } label: {
+                    Label("Feedback", systemImage: "bubble.left.and.bubble.right.fill")
+                }
+
+                NavigationLink {
+                    ConfigurationView(settings: settings)
+                } label: {
+                    Label("Settings", systemImage: "gearshape.fill")
+                }
+            }
+            .navigationTitle("Swiftly Feedback")
+        } detail: {
+            HomeView()
+        }
+        #else
+        TabView {
+            Tab("Home", systemImage: "house.fill") {
+                NavigationStack {
+                    HomeView()
+                }
+            }
+
+            Tab("Feedback", systemImage: "bubble.left.and.bubble.right.fill") {
+                FeedbackListView()
+            }
+
+            Tab("Settings", systemImage: "gearshape.fill") {
+                NavigationStack {
+                    ConfigurationView(settings: settings)
+                }
+            }
+        }
+        #endif
     }
 }
 
 #Preview {
-    ContentView()
+    ContentView(settings: AppSettings())
 }

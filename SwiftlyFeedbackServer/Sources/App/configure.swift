@@ -45,6 +45,7 @@ func configure(_ app: Application) async throws {
     app.migrations.add(CreateSDKUser())
     app.migrations.add(CreateViewEvent())
     app.migrations.add(AddProjectColorIndex())
+    app.migrations.add(AddUserNotificationSettings())
 
     try await app.autoMigrate()
 

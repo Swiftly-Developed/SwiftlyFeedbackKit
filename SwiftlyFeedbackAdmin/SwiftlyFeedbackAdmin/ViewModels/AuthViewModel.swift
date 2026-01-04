@@ -255,4 +255,20 @@ final class AuthViewModel {
 
         isLoading = false
     }
+
+    func updateNotificationSettings(notifyNewFeedback: Bool?, notifyNewComments: Bool?) async {
+        logger.info("🔔 Updating notification settings - feedback: \(String(describing: notifyNewFeedback)), comments: \(String(describing: notifyNewComments))")
+
+        do {
+            let updatedUser = try await AdminAPIClient.shared.updateNotificationSettings(
+                notifyNewFeedback: notifyNewFeedback,
+                notifyNewComments: notifyNewComments
+            )
+            currentUser = updatedUser
+            logger.info("✅ Notification settings updated")
+        } catch {
+            logger.error("❌ Failed to update notification settings: \(error.localizedDescription)")
+            showError(message: error.localizedDescription)
+        }
+    }
 }

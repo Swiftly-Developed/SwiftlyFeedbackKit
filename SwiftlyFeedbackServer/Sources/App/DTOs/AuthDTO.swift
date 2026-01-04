@@ -70,3 +70,8 @@ struct VerifyEmailResponseDTO: Content {
 struct MessageResponseDTO: Content {
     let message: String
 }
+
+struct UpdateNotificationSettingsDTO: Content {
+    let notifyNewFeedback: Bool?
+    let notifyNewComments: Bool?
+}

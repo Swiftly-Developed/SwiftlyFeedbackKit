@@ -499,6 +499,29 @@ actor AdminAPIClient {
         }
     }
 
+    // MARK: - Notification Settings API
+
+    func updateNotificationSettings(notifyNewFeedback: Bool?, notifyNewComments: Bool?) async throws -> User {
+        let path = "auth/notifications"
+        let body = UpdateNotificationSettingsRequest(
+            notifyNewFeedback: notifyNewFeedback,
+            notifyNewComments: notifyNewComments
+        )
+
+        logger.info("🟠 PATCH \(path) (notification settings)")
+        let (data, response) = try await makeRequest(path: path, method: "PATCH", body: body, requiresAuth: true)
+        try validateResponse(response, data: data, path: path)
+
+        do {
+            let decoded = try decoder.decode(User.self, from: data)
+            logger.info("✅ PATCH \(path) - decoded successfully")
+            return decoded
+        } catch {
+            logger.error("❌ PATCH \(path) - decoding failed: \(error.localizedDescription)")
+            throw APIError.decodingError(error)
+        }
+    }
+
     // MARK: - Home Dashboard API
 
     func getHomeDashboard() async throws -> HomeDashboard {

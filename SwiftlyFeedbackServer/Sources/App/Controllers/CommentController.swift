@@ -62,6 +62,40 @@ struct CommentController: RouteCollection {
         )
 
         try await comment.save(on: req.db)
+
+        // Send email notification to project members who have comment notifications enabled
+        let project = feedback.project
+        Task {
+            do {
+                try await project.$owner.load(on: req.db)
+                let members = try await ProjectMember.query(on: req.db)
+                    .filter(\.$project.$id == project.id!)
+                    .with(\.$user)
+                    .all()
+
+                // Filter to users with comment notifications enabled
+                var emails: [String] = []
+                if project.owner.notifyNewComments {
+                    emails.append(project.owner.email)
+                }
+                for member in members where member.user.notifyNewComments {
+                    emails.append(member.user.email)
+                }
+
+                let commenterName = (dto.isAdmin ?? false) ? "Admin" : "User"
+
+                try await req.emailService.sendNewCommentNotification(
+                    to: emails,
+                    projectName: project.name,
+                    feedbackTitle: feedback.title,
+                    commentContent: comment.content,
+                    commenterName: commenterName
+                )
+            } catch {
+                req.logger.error("Failed to send new comment notification: \(error)")
+            }
+        }
+
         return CommentResponseDTO(comment: comment)
     }
 

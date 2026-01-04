@@ -10,31 +10,26 @@ import SwiftlyFeedbackKit
 
 @main
 struct SwiftlyFeedbackDemoAppApp: App {
+    @State private var settings = AppSettings()
 
     init() {
-        // 1. Configure the SDK with your API key
-        SwiftlyFeedback.configure(with: "sf_BDcM1OmBAoijvu4cBzPD3g9qY6pYGohL")
+        // Configure the SDK with your API key
+        SwiftlyFeedback.configure(with: "sf_SoCZZ2mWzdUEPPvWUAXgE7iTUjEbs9PJ")
 
-        // 2. (Optional) Customize configuration
-        SwiftlyFeedback.config.allowUndoVote = true
-        SwiftlyFeedback.config.showCommentSection = true
-        SwiftlyFeedback.config.expandDescriptionInList = false
-
-        // 3. (Optional) Customize theme
+        // Customize theme
         SwiftlyFeedback.theme.primaryColor = .color(.blue)
         SwiftlyFeedback.theme.statusColors.completed = .green
-
-        // 4. (Optional) Set user payment for MRR tracking
-        // Call this when user subscribes or updates their subscription
-        SwiftlyFeedback.updateUser(payment: .monthly(9.99))
-
-        // 5. (Optional) Set custom user ID to link with your user system
-        // SwiftlyFeedback.updateUser(customID: "your-user-id")
     }
 
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            ContentView(settings: settings)
+                #if os(macOS)
+                .frame(minWidth: 800, minHeight: 500)
+                #endif
         }
+        #if os(macOS)
+        .defaultSize(width: 1000, height: 700)
+        #endif
     }
 }

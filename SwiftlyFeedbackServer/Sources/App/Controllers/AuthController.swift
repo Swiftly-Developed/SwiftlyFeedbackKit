@@ -16,6 +16,7 @@ struct AuthController: RouteCollection {
         tokenProtected.put("password", use: changePassword)
         tokenProtected.delete("account", use: deleteAccount)
         tokenProtected.post("resend-verification", use: resendVerification)
+        tokenProtected.patch("notifications", use: updateNotificationSettings)
     }
 
     @Sendable
@@ -254,5 +255,21 @@ struct AuthController: RouteCollection {
         )
 
         return MessageResponseDTO(message: "Verification email sent")
+    }
+
+    @Sendable
+    func updateNotificationSettings(req: Request) async throws -> User.Public {
+        let user = try req.auth.require(User.self)
+        let dto = try req.content.decode(UpdateNotificationSettingsDTO.self)
+
+        if let notifyNewFeedback = dto.notifyNewFeedback {
+            user.notifyNewFeedback = notifyNewFeedback
+        }
+        if let notifyNewComments = dto.notifyNewComments {
+            user.notifyNewComments = notifyNewComments
+        }
+
+        try await user.save(on: req.db)
+        return try user.asPublic()
     }
 }

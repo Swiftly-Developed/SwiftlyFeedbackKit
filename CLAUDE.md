@@ -131,6 +131,69 @@ Available gradients (index 0-7):
 6. Purple → Pink
 7. Mint → Green
 
+## Email Notifications
+
+Email notifications are sent via Resend API when certain events occur. Users can configure their notification preferences in the Admin app Settings.
+
+### Notification Settings
+Users have individual notification preferences stored on their account:
+- `notifyNewFeedback` - Receive emails when new feedback is submitted (default: true)
+- `notifyNewComments` - Receive emails when comments are added (default: true)
+
+Settings can be updated via:
+- Admin app: Settings → Notifications section with toggle switches
+- API: `PATCH /auth/notifications` with bearer token auth
+
+### New Feedback Notification
+When a user submits new feedback via the SDK, project members with `notifyNewFeedback` enabled receive an email containing:
+- Project name
+- Feedback category (feature request, bug report, etc.)
+- Feedback title
+- Truncated description (max 200 characters)
+
+### New Comment Notification
+When a comment is added to feedback, project members with `notifyNewComments` enabled receive an email containing:
+- Project name
+- Feedback title
+- Comment content (max 300 characters)
+- Commenter type (Admin/User)
+
+### Feedback Status Change Notification
+When an admin changes a feedback's status (e.g., pending → approved → in progress → completed), users who submitted the feedback (and provided an email) receive a notification containing:
+- Project name
+- Feedback title
+- Old status → New status transition
+- Status-specific message (e.g., "Work has started on your feedback")
+- Status emoji indicator (✅ approved, 🔄 in progress, 🎉 completed, ❌ rejected)
+
+Note: Currently only feedback submitters with emails are notified. To notify voters, add a `userEmail` field to the Vote model.
+
+All notification emails are sent asynchronously to avoid blocking API responses.
+
+### Other Email Types
+- **Email Verification**: Sent on user signup with 8-character verification code
+- **Project Invite**: Sent when inviting members to a project with invite code
+
+## Demo App
+
+The SwiftlyFeedbackDemoApp showcases SDK integration patterns:
+
+**Features:**
+- Platform-adaptive navigation: TabView (iOS) / NavigationSplitView (macOS)
+- Home screen explaining SwiftlyFeedback features
+- Settings screen demonstrating all SDK configuration options
+- User profile with email/name/custom ID
+- Subscription/MRR tracking with billing cycle picker
+- SDK configuration toggles (vote undo, comments, badges, etc.)
+- Settings persistence via UserDefaults with `@Observable`
+
+**Usage Pattern:**
+```swift
+// Use Bindable() for bindings with @Observable classes
+TextField("Name", text: Bindable(settings).userName)
+Toggle("Feature", isOn: Bindable(settings).featureEnabled)
+```
+
 ## Code Conventions
 
 - Use `@main` attribute for app entry points
@@ -142,3 +205,5 @@ Available gradients (index 0-7):
 - All user input is validated and trimmed
 - Email validation uses regex pattern matching
 - Passwords are hashed with bcrypt
+- Use `Bindable()` for @Observable bindings instead of `@Bindable` property wrapper
+- Platform conditionals: `#if os(macOS)` / `#if os(iOS)`

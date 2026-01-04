@@ -79,6 +79,9 @@ struct SettingsView: View {
             // Profile Section
             profileSection
 
+            // Notifications Section
+            notificationsSection
+
             // Security Section
             securitySection
 
@@ -135,6 +138,71 @@ struct SettingsView: View {
                 }
                 .padding(.vertical, 8)
             }
+        }
+    }
+
+    // MARK: - Notifications Section
+
+    @ViewBuilder
+    private var notificationsSection: some View {
+        Section {
+            Toggle(isOn: Binding(
+                get: { authViewModel.currentUser?.notifyNewFeedback ?? true },
+                set: { newValue in
+                    Task {
+                        await authViewModel.updateNotificationSettings(
+                            notifyNewFeedback: newValue,
+                            notifyNewComments: nil
+                        )
+                    }
+                }
+            )) {
+                HStack(spacing: 12) {
+                    Image(systemName: "bubble.left.fill")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(.white)
+                        .frame(width: 28, height: 28)
+                        .background(.blue, in: RoundedRectangle(cornerRadius: 6))
+
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("New Feedback")
+                        Text("Receive email when users submit feedback")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+            }
+
+            Toggle(isOn: Binding(
+                get: { authViewModel.currentUser?.notifyNewComments ?? true },
+                set: { newValue in
+                    Task {
+                        await authViewModel.updateNotificationSettings(
+                            notifyNewFeedback: nil,
+                            notifyNewComments: newValue
+                        )
+                    }
+                }
+            )) {
+                HStack(spacing: 12) {
+                    Image(systemName: "text.bubble.fill")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(.white)
+                        .frame(width: 28, height: 28)
+                        .background(.green, in: RoundedRectangle(cornerRadius: 6))
+
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("New Comments")
+                        Text("Receive email when comments are added")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+            }
+        } header: {
+            Text("Notifications")
+        } footer: {
+            Text("Email notifications for your projects.")
         }
     }
 

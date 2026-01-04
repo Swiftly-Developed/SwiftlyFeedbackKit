@@ -103,6 +103,37 @@ struct FeedbackController: RouteCollection {
         )
 
         try await feedback.save(on: req.db)
+
+        // Send email notification to project members who have feedback notifications enabled
+        Task {
+            do {
+                try await project.$owner.load(on: req.db)
+                let members = try await ProjectMember.query(on: req.db)
+                    .filter(\.$project.$id == project.id!)
+                    .with(\.$user)
+                    .all()
+
+                // Filter to users with feedback notifications enabled
+                var emails: [String] = []
+                if project.owner.notifyNewFeedback {
+                    emails.append(project.owner.email)
+                }
+                for member in members where member.user.notifyNewFeedback {
+                    emails.append(member.user.email)
+                }
+
+                try await req.emailService.sendNewFeedbackNotification(
+                    to: emails,
+                    projectName: project.name,
+                    feedbackTitle: feedback.title,
+                    feedbackCategory: feedback.category.rawValue,
+                    feedbackDescription: feedback.description
+                )
+            } catch {
+                req.logger.error("Failed to send new feedback notification: \(error)")
+            }
+        }
+
         return FeedbackResponseDTO(feedback: feedback)
     }
 
@@ -149,6 +180,9 @@ struct FeedbackController: RouteCollection {
 
         let dto = try req.content.decode(UpdateFeedbackDTO.self)
 
+        // Track old status for notification
+        let oldStatus = feedback.status
+
         if let title = dto.title {
             guard !title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
                 throw Abort(.badRequest, reason: "Title cannot be empty")
@@ -165,6 +199,35 @@ struct FeedbackController: RouteCollection {
         if let category = dto.category { feedback.category = category }
 
         try await feedback.save(on: req.db)
+
+        // Send status change notification if status changed
+        if let newStatus = dto.status, newStatus != oldStatus {
+            let project = feedback.project
+            Task {
+                do {
+                    // Collect emails: feedback submitter (if provided) + voters with emails
+                    var emails: [String] = []
+
+                    // Add feedback submitter's email if provided
+                    if let submitterEmail = feedback.userEmail, !submitterEmail.isEmpty {
+                        emails.append(submitterEmail)
+                    }
+
+                    // Note: Votes currently don't store email addresses
+                    // To notify voters, you would need to add userEmail field to Vote model
+
+                    try await req.emailService.sendFeedbackStatusChangeNotification(
+                        to: emails,
+                        projectName: project.name,
+                        feedbackTitle: feedback.title,
+                        oldStatus: oldStatus.rawValue,
+                        newStatus: newStatus.rawValue
+                    )
+                } catch {
+                    req.logger.error("Failed to send status change notification: \(error)")
+                }
+            }
+        }
 
         try await feedback.$votes.load(on: req.db)
         try await feedback.$comments.load(on: req.db)
