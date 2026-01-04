@@ -242,6 +242,61 @@ Request body:
 
 All Slack notifications are sent asynchronously to avoid blocking API responses.
 
+## Feedback Merging
+
+Admins can merge duplicate feedback items to consolidate similar requests. This helps get an accurate picture of demand while keeping vote counts and comments organized.
+
+### How Merging Works
+1. **Selection Mode**: In the Admin app feedback list, tap "Select" to enter selection mode
+2. **Select Feedbacks**: Tap multiple feedback items to select them (minimum 2 required)
+3. **Merge Button**: A floating action bar appears with the "Merge" button
+4. **Primary Selection**: Choose which feedback becomes the "primary" that survives the merge
+5. **Confirm**: Review the combined stats and confirm the merge
+
+### What Happens During Merge
+- **Primary feedback** keeps its title, description, category, and status
+- **Votes** are consolidated (de-duplicated by userId - no double-counting)
+- **Comments** are migrated with context prefix: "[Originally on: {title}] {content}"
+- **Vote count** is recalculated based on unique voters
+- **Secondary feedbacks** are soft-deleted (marked as merged, not hard deleted)
+- **MRR** is recalculated based on all unique voters
+
+### Database Fields (Feedback model)
+- `merged_into_id` (UUID?, optional) - Points to primary feedback if this was merged
+- `merged_at` (Date?, optional) - When the merge occurred
+- `merged_feedback_ids` ([UUID]?, optional) - For primary: IDs of feedback merged into this
+
+### Server Endpoint
+- `POST /feedbacks/merge` - Merge feedback items (bearer auth, owner/admin only)
+
+Request body:
+```json
+{
+  "primary_feedback_id": "uuid",
+  "secondary_feedback_ids": ["uuid", "uuid"]
+}
+```
+
+Response:
+```json
+{
+  "primary_feedback": { ... },
+  "merged_count": 2,
+  "total_votes": 25,
+  "total_comments": 8
+}
+```
+
+### Admin App UI
+- **Selection mode**: Toggle via "Select" toolbar button
+- **Merge badge**: Purple badge showing merged count on feedback that received merges
+- **Merge history**: Detail view shows list of merged feedback IDs
+
+### SDK Support
+- `mergedIntoId` field on Feedback model indicates if feedback was merged
+- `isMerged` computed property for easy checking
+- Merged feedback is filtered out from default list queries (`?includeMerged=true` to include)
+
 ## Demo App
 
 The SwiftlyFeedbackDemoApp showcases SDK integration patterns:

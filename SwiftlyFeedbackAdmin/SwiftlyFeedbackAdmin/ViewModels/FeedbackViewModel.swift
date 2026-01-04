@@ -55,10 +55,16 @@ final class FeedbackViewModel {
     // New comment field
     var newCommentContent = ""
 
+    // Multi-select for merging (Cmd/Ctrl+click)
+    var selectedFeedbackIds: Set<UUID> = []
+    var showMergeSheet = false
+    var feedbacksToMerge: [Feedback] = []
+
     // Track current project
     private var currentProjectId: UUID?
     private var currentApiKey: String?
     private var isLoadingFeedbacks = false
+    private var currentCommentsFeedbackId: UUID?
 
     // MARK: - Computed Properties
 
@@ -102,6 +108,55 @@ final class FeedbackViewModel {
             result[status] = filteredFeedbacks.filter { $0.status == status }
         }
         return result
+    }
+
+    /// Whether we can merge (need at least 2 selected feedbacks)
+    var canMerge: Bool {
+        selectedFeedbackIds.count >= 2
+    }
+
+    /// Get selected feedbacks in order
+    var selectedFeedbacks: [Feedback] {
+        feedbacks.filter { selectedFeedbackIds.contains($0.id) }
+    }
+
+    // MARK: - Multi-Select for Merge
+
+    func toggleSelection(_ id: UUID) {
+        if selectedFeedbackIds.contains(id) {
+            selectedFeedbackIds.remove(id)
+        } else {
+            selectedFeedbackIds.insert(id)
+        }
+    }
+
+    func isSelected(_ id: UUID) -> Bool {
+        selectedFeedbackIds.contains(id)
+    }
+
+    func clearSelection() {
+        selectedFeedbackIds.removeAll()
+    }
+
+    /// Start merge flow with the given feedback as one of the items to merge
+    func startMerge(with feedback: Feedback) {
+        // Include the right-clicked feedback plus any already selected
+        var feedbackIds = selectedFeedbackIds
+        feedbackIds.insert(feedback.id)
+
+        feedbacksToMerge = feedbacks.filter { feedbackIds.contains($0.id) }
+
+        if feedbacksToMerge.count >= 2 {
+            showMergeSheet = true
+        }
+    }
+
+    /// Start merge with currently selected feedbacks
+    func startMergeWithSelection() {
+        feedbacksToMerge = selectedFeedbacks
+        if feedbacksToMerge.count >= 2 {
+            showMergeSheet = true
+        }
     }
 
     // MARK: - Load Feedbacks
@@ -236,7 +291,20 @@ final class FeedbackViewModel {
     // MARK: - Comments
 
     func loadComments(feedbackId: UUID, apiKey: String) async {
+        // Skip if already loading comments for this feedback
+        guard !isLoadingComments || currentCommentsFeedbackId != feedbackId else {
+            logger.debug("⏭️ loadComments skipped - already loading for \(feedbackId)")
+            return
+        }
+
+        // Skip if we already have comments for this feedback (unless it's a different feedback)
+        if currentCommentsFeedbackId == feedbackId && !comments.isEmpty {
+            logger.debug("⏭️ loadComments skipped - already loaded for \(feedbackId)")
+            return
+        }
+
         isLoadingComments = true
+        currentCommentsFeedbackId = feedbackId
 
         do {
             comments = try await AdminAPIClient.shared.getComments(feedbackId: feedbackId, apiKey: apiKey)
@@ -315,5 +383,48 @@ final class FeedbackViewModel {
         categoryFilter = nil
         searchText = ""
         sortOption = .votes
+    }
+
+    // MARK: - Merge Feedback
+
+    func mergeFeedback(primaryId: UUID) async -> Bool {
+        let secondaryIds = feedbacksToMerge.map { $0.id }.filter { $0 != primaryId }
+
+        guard !secondaryIds.isEmpty else {
+            showError(message: "No secondary feedbacks to merge")
+            return false
+        }
+
+        isLoading = true
+        errorMessage = nil
+
+        do {
+            let response = try await AdminAPIClient.shared.mergeFeedback(
+                primaryId: primaryId,
+                secondaryIds: secondaryIds
+            )
+
+            // Update primary feedback in local array
+            if let index = feedbacks.firstIndex(where: { $0.id == primaryId }) {
+                feedbacks[index] = response.primaryFeedback
+            }
+
+            // Remove secondary feedbacks from local array
+            feedbacks.removeAll { secondaryIds.contains($0.id) }
+
+            // Clear selection
+            clearSelection()
+            feedbacksToMerge = []
+
+            logger.info("✅ Feedback merged: \(response.mergedCount) items merged, \(response.totalVotes) total votes")
+            showSuccess(message: "Successfully merged \(response.mergedCount) feedback items")
+            isLoading = false
+            return true
+        } catch {
+            logger.error("❌ Failed to merge feedback: \(error.localizedDescription)")
+            showError(message: error.localizedDescription)
+            isLoading = false
+            return false
+        }
     }
 }

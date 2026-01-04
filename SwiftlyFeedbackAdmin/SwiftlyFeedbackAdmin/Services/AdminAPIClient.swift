@@ -553,6 +553,26 @@ actor AdminAPIClient {
         }
     }
 
+    // MARK: - Merge Feedback API
+
+    func mergeFeedback(primaryId: UUID, secondaryIds: [UUID]) async throws -> MergeFeedbackResponse {
+        let path = "feedbacks/merge"
+        let body = MergeFeedbackRequest(primaryFeedbackId: primaryId, secondaryFeedbackIds: secondaryIds)
+
+        logger.info("🟢 POST \(path) (merge feedback)")
+        let (data, response) = try await makeRequest(path: path, method: "POST", body: body, requiresAuth: true)
+        try validateResponse(response, data: data, path: path)
+
+        do {
+            let decoded = try decoder.decode(MergeFeedbackResponse.self, from: data)
+            logger.info("✅ POST \(path) - merged \(decoded.mergedCount) feedbacks")
+            return decoded
+        } catch {
+            logger.error("❌ POST \(path) - decoding failed: \(error.localizedDescription)")
+            throw APIError.decodingError(error)
+        }
+    }
+
     // MARK: - Home Dashboard API
 
     func getHomeDashboard() async throws -> HomeDashboard {

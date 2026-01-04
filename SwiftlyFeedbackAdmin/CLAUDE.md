@@ -224,3 +224,27 @@ Projects can send notifications to Slack via Incoming Webhooks. Configure in Pro
 - **New feedback submitted**: When SDK users submit feedback
 - **New comments**: When comments are added to feedback
 - **Status changes**: When feedback status is updated
+
+## Feedback Merging
+
+Merge duplicate feedback items to consolidate similar requests and get accurate demand signals.
+
+### How to Merge
+1. In `FeedbackDashboardView` or `FeedbackListView`, single-click to select feedback items (macOS)
+2. Select 2+ items to enable the merge action bar at the bottom
+3. Click "Merge Selected" to open the merge sheet
+4. Choose which feedback becomes the primary (survives the merge)
+5. Confirm to merge votes, comments, and MRR
+
+### UI Components
+- **Selection mode**: Single-click selects, double-click opens (macOS); tap opens (iOS)
+- **Selection action bar**: Floating bar shows when 2+ items selected with "Merge Selected" button
+- **MergeFeedbackSheet**: Sheet to select primary feedback and confirm merge
+- **Merge badge**: Purple badge on feedback cards showing count of merged items
+- **Context menu**: Right-click options include "Select for Merge" and "Merge X Items..."
+
+### Files
+- `MergeFeedbackSheet.swift` - Sheet for selecting primary feedback
+- `FeedbackDashboardView.swift` - Main feedback tab with merge support
+- `FeedbackListView.swift` - Project detail feedback list with merge support
+- `FeedbackViewModel.swift` - Merge logic and selection state management

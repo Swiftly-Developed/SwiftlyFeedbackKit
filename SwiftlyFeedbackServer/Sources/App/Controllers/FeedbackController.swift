@@ -14,6 +14,7 @@ struct FeedbackController: RouteCollection {
         let protected = feedbacks.grouped(UserToken.authenticator(), User.guardMiddleware())
         protected.patch(":feedbackId", use: update)
         protected.delete(":feedbackId", use: delete)
+        protected.post("merge", use: merge)
     }
 
     /// Get the project from API key and validate it's not archived for write operations
@@ -43,11 +44,17 @@ struct FeedbackController: RouteCollection {
         let userId = req.headers.first(name: "X-User-Id")
         let statusFilter = req.query[String.self, at: "status"]
         let categoryFilter = req.query[String.self, at: "category"]
+        let includeMerged = req.query[Bool.self, at: "includeMerged"] ?? false
 
         var query = Feedback.query(on: req.db)
             .filter(\.$project.$id == project.id!)
             .with(\.$votes)
             .with(\.$comments)
+
+        // Filter out merged feedback by default
+        if !includeMerged {
+            query = query.filter(\.$mergedIntoId == nil)
+        }
 
         if let status = statusFilter, let feedbackStatus = FeedbackStatus(rawValue: status) {
             query = query.filter(\.$status == feedbackStatus)
@@ -341,5 +348,158 @@ struct FeedbackController: RouteCollection {
 
         try await feedback.delete(on: req.db)
         return .noContent
+    }
+
+    @Sendable
+    func merge(req: Request) async throws -> MergeFeedbackResponse {
+        let user = try req.auth.require(User.self)
+        let userId = try user.requireID()
+
+        let dto = try req.content.decode(MergeFeedbackRequest.self)
+
+        // Validate we have at least one secondary feedback
+        guard !dto.secondaryFeedbackIds.isEmpty else {
+            throw Abort(.badRequest, reason: "At least one secondary feedback ID is required")
+        }
+
+        // Validate primary is not in secondary list
+        guard !dto.secondaryFeedbackIds.contains(dto.primaryFeedbackId) else {
+            throw Abort(.badRequest, reason: "Primary feedback ID cannot be in secondary list")
+        }
+
+        // Fetch primary feedback with project
+        guard let primaryFeedback = try await Feedback.query(on: req.db)
+            .filter(\.$id == dto.primaryFeedbackId)
+            .with(\.$project)
+            .with(\.$votes)
+            .with(\.$comments)
+            .first() else {
+            throw Abort(.notFound, reason: "Primary feedback not found")
+        }
+
+        let project = primaryFeedback.project
+        let projectId = try project.requireID()
+
+        // Verify user has admin/owner access
+        let isOwner = project.userIsOwner(userId)
+        let membership = try await ProjectMember.query(on: req.db)
+            .filter(\.$project.$id == projectId)
+            .filter(\.$user.$id == userId)
+            .first()
+        let isAdmin = membership?.role == .admin
+
+        guard isOwner || isAdmin else {
+            throw Abort(.forbidden, reason: "Only project owners or admins can merge feedback")
+        }
+
+        // Check project is not archived
+        guard !project.isArchived else {
+            throw Abort(.forbidden, reason: "Cannot merge feedback in archived project")
+        }
+
+        // Validate primary feedback is not already merged
+        guard primaryFeedback.mergedIntoId == nil else {
+            throw Abort(.badRequest, reason: "Primary feedback has already been merged into another feedback")
+        }
+
+        // Fetch all secondary feedbacks
+        let secondaryFeedbacks = try await Feedback.query(on: req.db)
+            .filter(\.$id ~~ dto.secondaryFeedbackIds)
+            .with(\.$votes)
+            .with(\.$comments)
+            .all()
+
+        // Validate all secondary feedbacks were found
+        guard secondaryFeedbacks.count == dto.secondaryFeedbackIds.count else {
+            throw Abort(.notFound, reason: "One or more secondary feedbacks not found")
+        }
+
+        // Validate all feedbacks belong to the same project and none are already merged
+        for feedback in secondaryFeedbacks {
+            guard feedback.$project.id == projectId else {
+                throw Abort(.badRequest, reason: "All feedback must belong to the same project")
+            }
+            guard feedback.mergedIntoId == nil else {
+                throw Abort(.badRequest, reason: "Feedback '\(feedback.title)' has already been merged")
+            }
+        }
+
+        // Begin merge operation
+        let primaryId = try primaryFeedback.requireID()
+
+        // Collect existing voter IDs from primary
+        var existingVoterIds = Set(primaryFeedback.votes.map { $0.userId })
+
+        // Process each secondary feedback
+        for secondary in secondaryFeedbacks {
+            // Migrate votes (de-duplicate by userId)
+            for vote in secondary.votes {
+                if !existingVoterIds.contains(vote.userId) {
+                    // Create new vote on primary
+                    let newVote = Vote(userId: vote.userId, feedbackId: primaryId)
+                    try await newVote.save(on: req.db)
+                    existingVoterIds.insert(vote.userId)
+                }
+            }
+
+            // Migrate comments with context prefix
+            for comment in secondary.comments {
+                let prefixedContent = "[Originally on: \(secondary.title)] \(comment.content)"
+                let newComment = Comment(
+                    content: prefixedContent,
+                    userId: comment.userId,
+                    isAdmin: comment.isAdmin,
+                    feedbackId: primaryId
+                )
+                try await newComment.save(on: req.db)
+            }
+
+            // Mark secondary as merged
+            secondary.mergedIntoId = primaryId
+            secondary.mergedAt = Date()
+            try await secondary.save(on: req.db)
+        }
+
+        // Update primary feedback
+        let mergedIds = dto.secondaryFeedbackIds
+        primaryFeedback.mergedFeedbackIds = (primaryFeedback.mergedFeedbackIds ?? []) + mergedIds
+        primaryFeedback.voteCount = existingVoterIds.count
+        try await primaryFeedback.save(on: req.db)
+
+        // Reload to get updated data
+        try await primaryFeedback.$votes.load(on: req.db)
+        try await primaryFeedback.$comments.load(on: req.db)
+
+        // Calculate MRR for response
+        let allUserIds = Set([primaryFeedback.userId] + primaryFeedback.votes.map { $0.userId })
+        let sdkUsers = try await SDKUser.query(on: req.db)
+            .filter(\.$project.$id == projectId)
+            .filter(\.$userId ~~ Array(allUserIds))
+            .all()
+        let mrrByUserId = Dictionary(uniqueKeysWithValues: sdkUsers.map { ($0.userId, $0.mrr) })
+
+        var totalMrr: Double = 0
+        if let creatorMrr = mrrByUserId[primaryFeedback.userId] ?? nil {
+            totalMrr += creatorMrr
+        }
+        for vote in primaryFeedback.votes {
+            if let voterMrr = mrrByUserId[vote.userId] ?? nil {
+                totalMrr += voterMrr
+            }
+        }
+
+        let responseDTO = FeedbackResponseDTO(
+            feedback: primaryFeedback,
+            hasVoted: false,
+            commentCount: primaryFeedback.comments.count,
+            totalMrr: totalMrr > 0 ? totalMrr : nil
+        )
+
+        return MergeFeedbackResponse(
+            primaryFeedback: responseDTO,
+            mergedCount: secondaryFeedbacks.count,
+            totalVotes: primaryFeedback.voteCount,
+            totalComments: primaryFeedback.comments.count
+        )
     }
 }

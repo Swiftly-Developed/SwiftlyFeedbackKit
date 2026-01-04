@@ -13,6 +13,12 @@ struct FeedbackDetailView: View {
                 // Header section
                 headerSection
 
+                // Merge history section (if applicable)
+                if feedback.hasMergedFeedback {
+                    Divider()
+                    mergeHistorySection
+                }
+
                 Divider()
 
                 // Description section
@@ -76,6 +82,9 @@ struct FeedbackDetailView: View {
                 FeedbackStatusBadge(status: feedback.status)
                 FeedbackCategoryBadge(category: feedback.category)
                 MrrBadge(mrr: feedback.formattedMrr)
+                if feedback.hasMergedFeedback {
+                    MergeBadge(count: feedback.mergedCount)
+                }
                 Spacer()
                 HStack(spacing: 4) {
                     Image(systemName: "arrow.up")
@@ -137,6 +146,51 @@ struct FeedbackDetailView: View {
             Text(feedback.description)
                 .font(.body)
                 .foregroundStyle(.primary)
+        }
+    }
+
+    // MARK: - Merge History Section
+
+    private var mergeHistorySection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Image(systemName: "arrow.triangle.merge")
+                    .foregroundStyle(.indigo)
+                Text("Merge History")
+                    .font(.headline)
+            }
+
+            VStack(alignment: .leading, spacing: 8) {
+                Text("This feedback was created by merging \(feedback.mergedCount) other feedback items.")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+
+                if let mergedIds = feedback.mergedFeedbackIds {
+                    Text("Merged Feedback IDs:")
+                        .font(.caption)
+                        .fontWeight(.medium)
+                        .foregroundStyle(.tertiary)
+
+                    ForEach(mergedIds, id: \.self) { id in
+                        HStack(spacing: 6) {
+                            Image(systemName: "doc.on.doc")
+                                .font(.caption)
+                                .foregroundStyle(.tertiary)
+                            Text(id.uuidString.prefix(8) + "...")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                                .monospaced()
+                        }
+                    }
+                }
+            }
+            .padding()
+            #if os(macOS)
+            .background(Color(nsColor: .controlBackgroundColor))
+            #else
+            .background(Color(.secondarySystemGroupedBackground))
+            #endif
+            .clipShape(RoundedRectangle(cornerRadius: 12))
         }
     }
 
@@ -413,7 +467,10 @@ struct CommentRowView: View {
                 commentCount: 3,
                 totalMrr: 9.99,
                 createdAt: Date().addingTimeInterval(-86400 * 3),
-                updatedAt: Date().addingTimeInterval(-3600)
+                updatedAt: Date().addingTimeInterval(-3600),
+                mergedIntoId: nil,
+                mergedAt: nil,
+                mergedFeedbackIds: [UUID(), UUID()]
             ),
             apiKey: "test-key",
             viewModel: FeedbackViewModel()

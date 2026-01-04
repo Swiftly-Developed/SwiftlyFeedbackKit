@@ -30,6 +30,10 @@ struct FeedbackResponseDTO: Content {
     let totalMrr: Double?
     let createdAt: Date?
     let updatedAt: Date?
+    // Merge-related fields
+    let mergedIntoId: UUID?
+    let mergedAt: Date?
+    let mergedFeedbackIds: [UUID]?
 
     init(feedback: Feedback, hasVoted: Bool = false, commentCount: Int = 0, totalMrr: Double? = nil) {
         self.id = feedback.id!
@@ -45,5 +49,8 @@ struct FeedbackResponseDTO: Content {
         self.totalMrr = totalMrr
         self.createdAt = feedback.createdAt
         self.updatedAt = feedback.updatedAt
+        self.mergedIntoId = feedback.mergedIntoId
+        self.mergedAt = feedback.mergedAt
+        self.mergedFeedbackIds = feedback.mergedFeedbackIds
     }
 }

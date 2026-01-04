@@ -13,6 +13,15 @@ public struct Feedback: Identifiable, Codable, Sendable, Equatable, Hashable {
     public let commentCount: Int
     public let createdAt: Date?
     public let updatedAt: Date?
+    // Merge-related fields
+    public let mergedIntoId: UUID?
+    public let mergedAt: Date?
+    public let mergedFeedbackIds: [UUID]?
+
+    /// Whether this feedback has been merged into another
+    public var isMerged: Bool {
+        mergedIntoId != nil
+    }
 
     public init(
         id: UUID,
@@ -26,7 +35,10 @@ public struct Feedback: Identifiable, Codable, Sendable, Equatable, Hashable {
         hasVoted: Bool,
         commentCount: Int,
         createdAt: Date?,
-        updatedAt: Date?
+        updatedAt: Date?,
+        mergedIntoId: UUID? = nil,
+        mergedAt: Date? = nil,
+        mergedFeedbackIds: [UUID]? = nil
     ) {
         self.id = id
         self.title = title
@@ -40,6 +52,9 @@ public struct Feedback: Identifiable, Codable, Sendable, Equatable, Hashable {
         self.commentCount = commentCount
         self.createdAt = createdAt
         self.updatedAt = updatedAt
+        self.mergedIntoId = mergedIntoId
+        self.mergedAt = mergedAt
+        self.mergedFeedbackIds = mergedFeedbackIds
     }
 }
 

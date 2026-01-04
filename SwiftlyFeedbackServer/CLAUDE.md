@@ -114,6 +114,7 @@ All routes prefixed with `/api/v1`.
 - `GET /feedbacks/:id` - Get feedback details
 - `PATCH /feedbacks/:id` - Update feedback (auth + project access)
 - `DELETE /feedbacks/:id` - Delete feedback (auth + owner/admin)
+- `POST /feedbacks/merge` - Merge feedback items (auth + owner/admin)
 
 ### Votes (X-API-Key header required)
 - `POST /feedbacks/:id/votes` - Vote (blocked if archived or status is completed/rejected)
@@ -156,3 +157,33 @@ All routes prefixed with `/api/v1`.
 - User authentication uses Bearer tokens via `UserToken` model
 - API key authentication uses `X-API-Key` header for SDK requests
 - Use `req.auth.require(User.self)` for authenticated routes
+
+## Feedback Merging
+
+The merge endpoint consolidates duplicate feedback items:
+
+### Endpoint
+`POST /feedbacks/merge` (Bearer token + owner/admin required)
+
+Request body:
+```json
+{
+  "primary_feedback_id": "uuid",
+  "secondary_feedback_ids": ["uuid", "uuid"]
+}
+```
+
+### What Happens During Merge
+1. **Votes** are moved to primary feedback (de-duplicated by userId)
+2. **Comments** are migrated with prefix: "[Originally on: {title}] {content}"
+3. **Vote count** is recalculated from unique voters
+4. **MRR** is recalculated from all unique voters
+5. **Secondary feedbacks** are marked as merged (soft delete)
+
+### Database Fields (Feedback model)
+- `merged_into_id` (UUID?) - Points to primary feedback if merged
+- `merged_at` (Date?) - When the merge occurred
+- `merged_feedback_ids` ([UUID]?) - For primary: IDs of merged feedback
+
+### Migration
+`AddFeedbackMergeFields` adds the merge-related columns to the feedbacks table.

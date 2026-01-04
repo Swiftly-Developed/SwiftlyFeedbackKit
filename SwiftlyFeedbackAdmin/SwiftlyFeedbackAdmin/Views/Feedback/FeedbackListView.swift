@@ -29,46 +29,107 @@ struct FeedbackListView: View {
     @AppStorage("feedbackViewMode") private var viewMode: FeedbackViewMode = .list
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @State private var selectedFeedbackId: UUID?
+    @State private var feedbackToOpen: Feedback?
 
     var body: some View {
-        feedbackListContent
-            .navigationTitle("Feedback")
-            .toolbar {
-                #if os(iOS)
-                ToolbarItem(placement: .topBarLeading) {
-                    viewModePicker
+        ZStack(alignment: .bottom) {
+            feedbackListContent
+                .navigationTitle("Feedback")
+                .toolbar {
+                    #if os(iOS)
+                    ToolbarItem(placement: .topBarLeading) {
+                        viewModePicker
+                    }
+                    #else
+                    ToolbarItem(placement: .automatic) {
+                        viewModePicker
+                    }
+                    #endif
+
+                    ToolbarItem(placement: .primaryAction) {
+                        filterMenu
+                    }
                 }
-                #else
-                ToolbarItem(placement: .automatic) {
-                    viewModePicker
+                .searchable(text: $viewModel.searchText, prompt: "Search feedback...")
+                .task {
+                    await viewModel.loadFeedbacks(projectId: project.id, apiKey: project.apiKey)
+                }
+                #if os(iOS)
+                .refreshable {
+                    await viewModel.refreshFeedbacks()
                 }
                 #endif
 
-                ToolbarItem(placement: .primaryAction) {
-                    filterMenu
-                }
+            // Selection action bar (shows when 2+ items selected)
+            if viewModel.canMerge {
+                selectionActionBar
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
             }
-            .searchable(text: $viewModel.searchText, prompt: "Search feedback...")
-            .task {
-                await viewModel.loadFeedbacks(projectId: project.id, apiKey: project.apiKey)
+        }
+        .animation(.default, value: viewModel.canMerge)
+        .alert("Error", isPresented: $viewModel.showError) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text(viewModel.errorMessage ?? "An error occurred")
+        }
+        .alert("Success", isPresented: $viewModel.showSuccess) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text(viewModel.successMessage ?? "Operation completed")
+        }
+        .sheet(isPresented: $viewModel.showMergeSheet) {
+            MergeFeedbackSheet(viewModel: viewModel)
+        }
+        .navigationDestination(for: Feedback.self) { feedback in
+            FeedbackDetailView(
+                feedback: feedback,
+                apiKey: project.apiKey,
+                viewModel: viewModel
+            )
+        }
+        .navigationDestination(item: $feedbackToOpen) { feedback in
+            FeedbackDetailView(
+                feedback: feedback,
+                apiKey: project.apiKey,
+                viewModel: viewModel
+            )
+        }
+    }
+
+    // MARK: - Selection Action Bar
+
+    private var selectionActionBar: some View {
+        HStack {
+            Text("\(viewModel.selectedFeedbackIds.count) items selected")
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+
+            Button {
+                viewModel.clearSelection()
+            } label: {
+                Text("Clear")
             }
-            #if os(iOS)
-            .refreshable {
-                await viewModel.refreshFeedbacks()
+            .buttonStyle(.bordered)
+
+            Spacer()
+
+            Button {
+                viewModel.startMergeWithSelection()
+            } label: {
+                Label("Merge Selected", systemImage: "arrow.triangle.merge")
+                    .fontWeight(.semibold)
             }
-            #endif
-            .alert("Error", isPresented: $viewModel.showError) {
-                Button("OK", role: .cancel) {}
-            } message: {
-                Text(viewModel.errorMessage ?? "An error occurred")
-            }
-            .navigationDestination(for: Feedback.self) { feedback in
-                FeedbackDetailView(
-                    feedback: feedback,
-                    apiKey: project.apiKey,
-                    viewModel: viewModel
-                )
-            }
+            .buttonStyle(.borderedProminent)
+        }
+        .padding()
+        #if os(macOS)
+        .background(.regularMaterial)
+        #else
+        .background(.ultraThinMaterial)
+        #endif
+        .clipShape(RoundedRectangle(cornerRadius: 12))
+        .shadow(color: .black.opacity(0.1), radius: 8, x: 0, y: -2)
+        .padding()
     }
 
     // MARK: - View Mode Picker
@@ -227,11 +288,33 @@ struct FeedbackListView: View {
     // MARK: - List View
 
     private var listView: some View {
-        List {
+        List(selection: $viewModel.selectedFeedbackIds) {
             ForEach(viewModel.filteredFeedbacks) { feedback in
+                #if os(macOS)
+                // macOS: Single click selects, double click opens
+                FeedbackListRowView(feedback: feedback, showMergeBadge: feedback.hasMergedFeedback)
+                    .tag(feedback.id)
+                    .onTapGesture(count: 2) {
+                        feedbackToOpen = feedback
+                    }
+                    .onTapGesture(count: 1) {
+                        viewModel.toggleSelection(feedback.id)
+                    }
+                    .contextMenu {
+                        Button {
+                            feedbackToOpen = feedback
+                        } label: {
+                            Label("Open", systemImage: "arrow.right.circle")
+                        }
+                        Divider()
+                        feedbackContextMenuItems(for: feedback)
+                    }
+                #else
+                // iOS: Single tap opens (standard behavior)
                 NavigationLink(value: feedback) {
-                    FeedbackListRowView(feedback: feedback)
+                    FeedbackListRowView(feedback: feedback, showMergeBadge: feedback.hasMergedFeedback)
                 }
+                .tag(feedback.id)
                 .swipeActions(edge: .trailing, allowsFullSwipe: false) {
                     Button(role: .destructive) {
                         Task {
@@ -242,20 +325,57 @@ struct FeedbackListView: View {
                     }
                 }
                 .contextMenu {
-                    statusMenu(for: feedback)
-                    categoryMenu(for: feedback)
-                    Divider()
-                    Button(role: .destructive) {
-                        Task {
-                            await viewModel.deleteFeedback(id: feedback.id)
-                        }
-                    } label: {
-                        Label("Delete", systemImage: "trash")
-                    }
+                    feedbackContextMenuItems(for: feedback)
                 }
+                #endif
             }
         }
         .listStyle(.plain)
+    }
+
+    // MARK: - Context Menu Items
+
+    @ViewBuilder
+    private func feedbackContextMenuItems(for feedback: Feedback) -> some View {
+        // Merge option (shows when this + selected >= 2)
+        let canMergeThis = viewModel.selectedFeedbackIds.count >= 1 || viewModel.selectedFeedbackIds.contains(feedback.id)
+        if canMergeThis {
+            Button {
+                viewModel.startMerge(with: feedback)
+            } label: {
+                let count = viewModel.selectedFeedbackIds.contains(feedback.id)
+                    ? viewModel.selectedFeedbackIds.count
+                    : viewModel.selectedFeedbackIds.count + 1
+                Label("Merge \(count) Items...", systemImage: "arrow.triangle.merge")
+            }
+            .disabled(viewModel.selectedFeedbackIds.count == 0 && !viewModel.selectedFeedbackIds.contains(feedback.id))
+
+            Divider()
+        }
+
+        // Selection toggle
+        Button {
+            viewModel.toggleSelection(feedback.id)
+        } label: {
+            if viewModel.isSelected(feedback.id) {
+                Label("Deselect", systemImage: "checkmark.circle.fill")
+            } else {
+                Label("Select for Merge", systemImage: "checkmark.circle")
+            }
+        }
+
+        Divider()
+
+        statusMenu(for: feedback)
+        categoryMenu(for: feedback)
+        Divider()
+        Button(role: .destructive) {
+            Task {
+                await viewModel.deleteFeedback(id: feedback.id)
+            }
+        } label: {
+            Label("Delete", systemImage: "trash")
+        }
     }
 
     // MARK: - Kanban View
@@ -268,7 +388,8 @@ struct FeedbackListView: View {
                         status: status,
                         feedbacks: viewModel.feedbacksByStatus[status] ?? [],
                         viewModel: viewModel,
-                        apiKey: project.apiKey
+                        apiKey: project.apiKey,
+                        feedbackToOpen: $feedbackToOpen
                     )
                 }
             }
@@ -355,6 +476,7 @@ struct FeedbackListView: View {
 
 struct FeedbackListRowView: View {
     let feedback: Feedback
+    var showMergeBadge: Bool = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
@@ -362,6 +484,9 @@ struct FeedbackListRowView: View {
                 FeedbackStatusBadge(status: feedback.status)
                 FeedbackCategoryBadge(category: feedback.category)
                 MrrBadge(mrr: feedback.formattedMrr)
+                if showMergeBadge {
+                    MergeBadge(count: feedback.mergedCount)
+                }
                 Spacer()
                 HStack(spacing: 4) {
                     Image(systemName: "arrow.up")
@@ -410,6 +535,27 @@ struct FeedbackListRowView: View {
     }
 }
 
+// MARK: - Merge Badge
+
+struct MergeBadge: View {
+    let count: Int
+
+    var body: some View {
+        HStack(spacing: 3) {
+            Image(systemName: "arrow.triangle.merge")
+                .font(.caption2)
+            Text("\(count)")
+                .font(.caption2)
+                .fontWeight(.medium)
+        }
+        .padding(.horizontal, 6)
+        .padding(.vertical, 3)
+        .background(Color.indigo.opacity(0.15))
+        .foregroundStyle(.indigo)
+        .clipShape(Capsule())
+    }
+}
+
 // MARK: - Kanban Column View
 
 struct KanbanColumnView: View {
@@ -417,6 +563,7 @@ struct KanbanColumnView: View {
     let feedbacks: [Feedback]
     @Bindable var viewModel: FeedbackViewModel
     let apiKey: String
+    @Binding var feedbackToOpen: Feedback?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -449,14 +596,7 @@ struct KanbanColumnView: View {
             ScrollView {
                 LazyVStack(spacing: 8) {
                     ForEach(feedbacks) { feedback in
-                        NavigationLink(value: feedback) {
-                            KanbanCardView(
-                                feedback: feedback,
-                                viewModel: viewModel
-                            )
-                        }
-                        .buttonStyle(.plain)
-                        .draggable(feedback.id.uuidString)
+                        kanbanCard(for: feedback)
                     }
                 }
                 .padding(8)
@@ -491,20 +631,127 @@ struct KanbanColumnView: View {
         case .rejected: return .red
         }
     }
+
+    @ViewBuilder
+    private func kanbanCard(for feedback: Feedback) -> some View {
+        #if os(macOS)
+        // macOS: Single click selects, double click opens
+        KanbanCardView(
+            feedback: feedback,
+            isSelected: viewModel.isSelected(feedback.id)
+        )
+        .onTapGesture(count: 2) {
+            feedbackToOpen = feedback
+        }
+        .onTapGesture(count: 1) {
+            viewModel.toggleSelection(feedback.id)
+        }
+        .draggable(feedback.id.uuidString)
+        .contextMenu {
+            Button {
+                feedbackToOpen = feedback
+            } label: {
+                Label("Open", systemImage: "arrow.right.circle")
+            }
+            Divider()
+            kanbanContextMenuItems(for: feedback)
+        }
+        #else
+        // iOS: Single tap opens
+        NavigationLink(value: feedback) {
+            KanbanCardView(
+                feedback: feedback,
+                isSelected: viewModel.isSelected(feedback.id)
+            )
+        }
+        .buttonStyle(.plain)
+        .draggable(feedback.id.uuidString)
+        .contextMenu {
+            kanbanContextMenuItems(for: feedback)
+        }
+        #endif
+    }
+
+    @ViewBuilder
+    private func kanbanContextMenuItems(for feedback: Feedback) -> some View {
+        // Merge option
+        if viewModel.selectedFeedbackIds.count >= 1 {
+            Button {
+                viewModel.startMerge(with: feedback)
+            } label: {
+                let count = viewModel.selectedFeedbackIds.contains(feedback.id)
+                    ? viewModel.selectedFeedbackIds.count
+                    : viewModel.selectedFeedbackIds.count + 1
+                Label("Merge \(count) Items...", systemImage: "arrow.triangle.merge")
+            }
+            Divider()
+        }
+
+        // Selection toggle
+        Button {
+            viewModel.toggleSelection(feedback.id)
+        } label: {
+            if viewModel.isSelected(feedback.id) {
+                Label("Deselect", systemImage: "checkmark.circle.fill")
+            } else {
+                Label("Select for Merge", systemImage: "checkmark.circle")
+            }
+        }
+
+        Divider()
+
+        // Status menu
+        Menu {
+            ForEach(FeedbackStatus.allCases, id: \.self) { newStatus in
+                Button {
+                    Task {
+                        await viewModel.updateFeedbackStatus(id: feedback.id, status: newStatus)
+                    }
+                } label: {
+                    HStack {
+                        Text(newStatus.displayName)
+                        if feedback.status == newStatus {
+                            Image(systemName: "checkmark")
+                        }
+                    }
+                }
+            }
+        } label: {
+            Label("Set Status", systemImage: "flag")
+        }
+
+        Divider()
+
+        Button(role: .destructive) {
+            Task {
+                await viewModel.deleteFeedback(id: feedback.id)
+            }
+        } label: {
+            Label("Delete", systemImage: "trash")
+        }
+    }
 }
 
 // MARK: - Kanban Card View
 
 struct KanbanCardView: View {
     let feedback: Feedback
-    @Bindable var viewModel: FeedbackViewModel
+    var isSelected: Bool = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
                 FeedbackCategoryBadge(category: feedback.category)
                 MrrBadge(mrr: feedback.formattedMrr)
+                if feedback.hasMergedFeedback {
+                    MergeBadge(count: feedback.mergedCount)
+                }
                 Spacer()
+                if isSelected {
+                    Image(systemName: "checkmark.circle.fill")
+                        .foregroundStyle(.blue)
+                        .font(.caption)
+                }
                 HStack(spacing: 4) {
                     Image(systemName: "arrow.up")
                         .font(.caption2)
@@ -549,11 +796,15 @@ struct KanbanCardView: View {
         .padding(12)
         .frame(maxWidth: .infinity, alignment: .leading)
         #if os(macOS)
-        .background(Color(nsColor: .controlBackgroundColor))
+        .background(isSelected ? Color.blue.opacity(0.1) : Color(nsColor: .controlBackgroundColor))
         #else
-        .background(Color(.secondarySystemGroupedBackground))
+        .background(isSelected ? Color.blue.opacity(0.1) : Color(.secondarySystemGroupedBackground))
         #endif
         .clipShape(RoundedRectangle(cornerRadius: 8))
+        .overlay(
+            RoundedRectangle(cornerRadius: 8)
+                .stroke(isSelected ? Color.blue : Color.clear, lineWidth: 2)
+        )
         .shadow(color: .black.opacity(0.05), radius: 2, x: 0, y: 1)
     }
 }

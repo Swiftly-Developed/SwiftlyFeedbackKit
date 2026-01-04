@@ -43,6 +43,26 @@ final class Feedback: Model, Content, @unchecked Sendable {
     @Children(for: \.$feedback)
     var comments: [Comment]
 
+    // Merge-related fields
+    @OptionalField(key: "merged_into_id")
+    var mergedIntoId: UUID?
+
+    @OptionalField(key: "merged_at")
+    var mergedAt: Date?
+
+    @OptionalField(key: "merged_feedback_ids")
+    var mergedFeedbackIds: [UUID]?
+
+    /// Whether this feedback has been merged into another
+    var isMerged: Bool {
+        mergedIntoId != nil
+    }
+
+    /// Whether this feedback has received merges from other feedback
+    var hasMergedFeedback: Bool {
+        mergedFeedbackIds?.isEmpty == false
+    }
+
     init() {}
 
     init(

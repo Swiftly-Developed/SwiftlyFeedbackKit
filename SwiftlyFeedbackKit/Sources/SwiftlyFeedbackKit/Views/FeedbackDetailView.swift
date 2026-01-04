@@ -255,7 +255,10 @@ final class FeedbackDetailViewModel {
                 hasVoted: result.hasVoted,
                 commentCount: currentFeedback.commentCount,
                 createdAt: currentFeedback.createdAt,
-                updatedAt: currentFeedback.updatedAt
+                updatedAt: currentFeedback.updatedAt,
+                mergedIntoId: currentFeedback.mergedIntoId,
+                mergedAt: currentFeedback.mergedAt,
+                mergedFeedbackIds: currentFeedback.mergedFeedbackIds
             )
         } catch {
             errorMessage = error.localizedDescription

@@ -17,6 +17,10 @@ struct Feedback: Codable, Identifiable, Sendable, Hashable {
     let totalMrr: Double?
     let createdAt: Date?
     let updatedAt: Date?
+    // Merge-related fields
+    let mergedIntoId: UUID?
+    let mergedAt: Date?
+    let mergedFeedbackIds: [UUID]?
 
     /// Formatted total MRR string for display (always shows, even if $0)
     var formattedMrr: String {
@@ -25,6 +29,21 @@ struct Feedback: Codable, Identifiable, Sendable, Hashable {
         formatter.currencyCode = "USD"
         formatter.maximumFractionDigits = 0
         return formatter.string(from: NSNumber(value: totalMrr ?? 0)) ?? "$0"
+    }
+
+    /// Whether this feedback has been merged into another
+    var isMerged: Bool {
+        mergedIntoId != nil
+    }
+
+    /// Whether this feedback has received merges from other feedback
+    var hasMergedFeedback: Bool {
+        mergedFeedbackIds?.isEmpty == false
+    }
+
+    /// Number of feedbacks merged into this one
+    var mergedCount: Int {
+        mergedFeedbackIds?.count ?? 0
     }
 }
 
@@ -124,4 +143,18 @@ struct CreateFeedbackRequest: Encodable {
     let category: FeedbackCategory
     let userId: String
     let userEmail: String?
+}
+
+// MARK: - Merge DTOs
+
+struct MergeFeedbackRequest: Encodable {
+    let primaryFeedbackId: UUID
+    let secondaryFeedbackIds: [UUID]
+}
+
+struct MergeFeedbackResponse: Codable {
+    let primaryFeedback: Feedback
+    let mergedCount: Int
+    let totalVotes: Int
+    let totalComments: Int
 }
