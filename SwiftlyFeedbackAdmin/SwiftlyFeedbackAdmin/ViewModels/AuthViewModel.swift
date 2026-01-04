@@ -1,7 +1,4 @@
 import SwiftUI
-import OSLog
-
-private let logger = Logger(subsystem: "com.swiftlyfeedback.admin", category: "AuthViewModel")
 
 @MainActor
 @Observable
@@ -27,42 +24,42 @@ final class AuthViewModel {
 
     var needsEmailVerification: Bool {
         let needs = isAuthenticated && currentUser?.isEmailVerified == false
-        logger.debug("🔍 needsEmailVerification: \(needs) (isAuthenticated: \(self.isAuthenticated), isEmailVerified: \(self.currentUser?.isEmailVerified ?? false))")
+        AppLogger.viewModel.debug("🔍 needsEmailVerification: \(needs) (isAuthenticated: \(self.isAuthenticated), isEmailVerified: \(self.currentUser?.isEmailVerified ?? false))")
         return needs
     }
 
     init() {
-        logger.info("AuthViewModel initialized")
+        AppLogger.viewModel.info("AuthViewModel initialized")
         // Check if user is already logged in
         checkAuthState()
     }
 
     func checkAuthState() {
-        logger.info("🔄 Checking auth state...")
+        AppLogger.viewModel.info("🔄 Checking auth state...")
         Task {
             if KeychainService.getToken() != nil {
-                logger.info("🔑 Token found in keychain, fetching current user...")
+                AppLogger.viewModel.info("🔑 Token found in keychain, fetching current user...")
                 do {
                     currentUser = try await AuthService.shared.getCurrentUser()
                     isAuthenticated = true
-                    logger.info("✅ Auth state restored - user: \(self.currentUser?.id.uuidString ?? "nil"), isEmailVerified: \(self.currentUser?.isEmailVerified ?? false)")
+                    AppLogger.viewModel.info("✅ Auth state restored - user: \(self.currentUser?.id.uuidString ?? "nil"), isEmailVerified: \(self.currentUser?.isEmailVerified ?? false)")
                 } catch {
-                    logger.error("❌ Failed to restore auth state: \(error.localizedDescription)")
+                    AppLogger.viewModel.error("❌ Failed to restore auth state: \(error.localizedDescription)")
                     // Token invalid or expired
                     KeychainService.deleteToken()
                     isAuthenticated = false
-                    logger.info("🔑 Invalid token deleted from keychain")
+                    AppLogger.viewModel.info("🔑 Invalid token deleted from keychain")
                 }
             } else {
-                logger.info("🔑 No token in keychain - user not authenticated")
+                AppLogger.viewModel.info("🔑 No token in keychain - user not authenticated")
             }
         }
     }
 
     func login() async {
-        logger.info("🔐 Login attempt for: \(self.loginEmail)")
+        AppLogger.viewModel.info("🔐 Login attempt for: \(self.loginEmail)")
         guard !loginEmail.isEmpty, !loginPassword.isEmpty else {
-            logger.warning("⚠️ Login validation failed - empty fields")
+            AppLogger.viewModel.warning("⚠️ Login validation failed - empty fields")
             showError(message: "Please enter email and password")
             return
         }
@@ -77,10 +74,10 @@ final class AuthViewModel {
             )
             currentUser = response.user
             isAuthenticated = true
-            logger.info("✅ Login successful - isEmailVerified: \(response.user.isEmailVerified)")
+            AppLogger.viewModel.info("✅ Login successful - isEmailVerified: \(response.user.isEmailVerified)")
             clearLoginFields()
         } catch {
-            logger.error("❌ Login failed: \(error.localizedDescription)")
+            AppLogger.viewModel.error("❌ Login failed: \(error.localizedDescription)")
             showError(message: error.localizedDescription)
         }
 
@@ -88,21 +85,21 @@ final class AuthViewModel {
     }
 
     func signup() async {
-        logger.info("📝 Signup attempt for: \(self.signupEmail)")
+        AppLogger.viewModel.info("📝 Signup attempt for: \(self.signupEmail)")
         guard !signupEmail.isEmpty, !signupName.isEmpty, !signupPassword.isEmpty else {
-            logger.warning("⚠️ Signup validation failed - empty fields")
+            AppLogger.viewModel.warning("⚠️ Signup validation failed - empty fields")
             showError(message: "Please fill in all fields")
             return
         }
 
         guard signupPassword == signupConfirmPassword else {
-            logger.warning("⚠️ Signup validation failed - passwords don't match")
+            AppLogger.viewModel.warning("⚠️ Signup validation failed - passwords don't match")
             showError(message: "Passwords do not match")
             return
         }
 
         guard signupPassword.count >= 8 else {
-            logger.warning("⚠️ Signup validation failed - password too short")
+            AppLogger.viewModel.warning("⚠️ Signup validation failed - password too short")
             showError(message: "Password must be at least 8 characters")
             return
         }
@@ -118,10 +115,10 @@ final class AuthViewModel {
             )
             currentUser = response.user
             isAuthenticated = true
-            logger.info("✅ Signup successful - isEmailVerified: \(response.user.isEmailVerified)")
+            AppLogger.viewModel.info("✅ Signup successful - isEmailVerified: \(response.user.isEmailVerified)")
             clearSignupFields()
         } catch {
-            logger.error("❌ Signup failed: \(error.localizedDescription)")
+            AppLogger.viewModel.error("❌ Signup failed: \(error.localizedDescription)")
             showError(message: error.localizedDescription)
         }
 
@@ -129,25 +126,25 @@ final class AuthViewModel {
     }
 
     func logout() async {
-        logger.info("🚪 Logout initiated")
+        AppLogger.viewModel.info("🚪 Logout initiated")
         isLoading = true
 
         do {
             try await AuthService.shared.logout()
-            logger.info("✅ Logout successful")
+            AppLogger.viewModel.info("✅ Logout successful")
         } catch {
-            logger.warning("⚠️ Logout error (ignoring): \(error.localizedDescription)")
+            AppLogger.viewModel.warning("⚠️ Logout error (ignoring): \(error.localizedDescription)")
             // Ignore logout errors
         }
 
         currentUser = nil
         isAuthenticated = false
         isLoading = false
-        logger.info("🔄 Auth state cleared")
+        AppLogger.viewModel.info("🔄 Auth state cleared")
     }
 
     private func showError(message: String) {
-        logger.error("⚠️ Showing error to user: \(message)")
+        AppLogger.viewModel.error("⚠️ Showing error to user: \(message)")
         errorMessage = message
         showError = true
     }
@@ -165,7 +162,7 @@ final class AuthViewModel {
     }
 
     func changePassword(currentPassword: String, newPassword: String) async -> Bool {
-        logger.info("🔄 Password change initiated")
+        AppLogger.viewModel.info("🔄 Password change initiated")
         isLoading = true
         errorMessage = nil
 
@@ -174,13 +171,13 @@ final class AuthViewModel {
                 currentPassword: currentPassword,
                 newPassword: newPassword
             )
-            logger.info("✅ Password changed successfully")
+            AppLogger.viewModel.info("✅ Password changed successfully")
             // Password changed successfully - don't change auth state here
             // Let the caller dismiss sheets first, then call forceLogout()
             isLoading = false
             return true
         } catch {
-            logger.error("❌ Password change failed: \(error.localizedDescription)")
+            AppLogger.viewModel.error("❌ Password change failed: \(error.localizedDescription)")
             showError(message: error.localizedDescription)
             isLoading = false
             return false
@@ -188,25 +185,25 @@ final class AuthViewModel {
     }
 
     func forceLogout() {
-        logger.info("🚪 Force logout")
+        AppLogger.viewModel.info("🚪 Force logout")
         currentUser = nil
         isAuthenticated = false
     }
 
     func deleteAccount(password: String) async -> Bool {
-        logger.info("🗑️ Account deletion initiated")
+        AppLogger.viewModel.info("🗑️ Account deletion initiated")
         isLoading = true
         errorMessage = nil
 
         do {
             try await AuthService.shared.deleteAccount(password: password)
-            logger.info("✅ Account deleted successfully")
+            AppLogger.viewModel.info("✅ Account deleted successfully")
             // Account deleted successfully - don't change auth state here
             // Let the caller dismiss sheets first, then call forceLogout()
             isLoading = false
             return true
         } catch {
-            logger.error("❌ Account deletion failed: \(error.localizedDescription)")
+            AppLogger.viewModel.error("❌ Account deletion failed: \(error.localizedDescription)")
             showError(message: error.localizedDescription)
             isLoading = false
             return false
@@ -214,9 +211,9 @@ final class AuthViewModel {
     }
 
     func verifyEmail() async {
-        logger.info("✉️ Email verification initiated with code: \(self.verificationCode)")
+        AppLogger.viewModel.info("✉️ Email verification initiated with code: \(self.verificationCode)")
         guard verificationCode.count == 8 else {
-            logger.warning("⚠️ Invalid verification code length: \(self.verificationCode.count)")
+            AppLogger.viewModel.warning("⚠️ Invalid verification code length: \(self.verificationCode.count)")
             showError(message: "Please enter the 8-character verification code")
             return
         }
@@ -226,30 +223,30 @@ final class AuthViewModel {
 
         do {
             let response = try await AuthService.shared.verifyEmail(code: verificationCode)
-            logger.info("✅ Email verified - updating currentUser")
-            logger.info("📊 Before update: currentUser.isEmailVerified = \(self.currentUser?.isEmailVerified ?? false)")
+            AppLogger.viewModel.info("✅ Email verified - updating currentUser")
+            AppLogger.viewModel.info("📊 Before update: currentUser.isEmailVerified = \(self.currentUser?.isEmailVerified ?? false)")
             currentUser = response.user
-            logger.info("📊 After update: currentUser.isEmailVerified = \(self.currentUser?.isEmailVerified ?? false)")
+            AppLogger.viewModel.info("📊 After update: currentUser.isEmailVerified = \(self.currentUser?.isEmailVerified ?? false)")
             verificationCode = ""
         } catch {
-            logger.error("❌ Email verification failed: \(error.localizedDescription)")
+            AppLogger.viewModel.error("❌ Email verification failed: \(error.localizedDescription)")
             showError(message: error.localizedDescription)
         }
 
         isLoading = false
-        logger.info("📊 Final state: isAuthenticated=\(self.isAuthenticated), needsEmailVerification=\(self.needsEmailVerification)")
+        AppLogger.viewModel.info("📊 Final state: isAuthenticated=\(self.isAuthenticated), needsEmailVerification=\(self.needsEmailVerification)")
     }
 
     func resendVerification() async {
-        logger.info("📧 Resend verification initiated")
+        AppLogger.viewModel.info("📧 Resend verification initiated")
         isLoading = true
         errorMessage = nil
 
         do {
             _ = try await AuthService.shared.resendVerification()
-            logger.info("✅ Verification email resent")
+            AppLogger.viewModel.info("✅ Verification email resent")
         } catch {
-            logger.error("❌ Resend verification failed: \(error.localizedDescription)")
+            AppLogger.viewModel.error("❌ Resend verification failed: \(error.localizedDescription)")
             showError(message: error.localizedDescription)
         }
 
@@ -257,7 +254,7 @@ final class AuthViewModel {
     }
 
     func updateNotificationSettings(notifyNewFeedback: Bool?, notifyNewComments: Bool?) async {
-        logger.info("🔔 Updating notification settings - feedback: \(String(describing: notifyNewFeedback)), comments: \(String(describing: notifyNewComments))")
+        AppLogger.viewModel.info("🔔 Updating notification settings - feedback: \(String(describing: notifyNewFeedback)), comments: \(String(describing: notifyNewComments))")
 
         do {
             let updatedUser = try await AdminAPIClient.shared.updateNotificationSettings(
@@ -265,9 +262,9 @@ final class AuthViewModel {
                 notifyNewComments: notifyNewComments
             )
             currentUser = updatedUser
-            logger.info("✅ Notification settings updated")
+            AppLogger.viewModel.info("✅ Notification settings updated")
         } catch {
-            logger.error("❌ Failed to update notification settings: \(error.localizedDescription)")
+            AppLogger.viewModel.error("❌ Failed to update notification settings: \(error.localizedDescription)")
             showError(message: error.localizedDescription)
         }
     }

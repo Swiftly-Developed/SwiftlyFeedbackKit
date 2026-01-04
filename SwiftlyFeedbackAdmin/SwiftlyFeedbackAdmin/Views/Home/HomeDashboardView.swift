@@ -1,5 +1,4 @@
 import SwiftUI
-import OSLog
 
 // MARK: - Home Dashboard View
 
@@ -23,18 +22,18 @@ struct HomeDashboardView: View {
                 }
             }
             .task {
-                Logger.view.info("HomeDashboardView: .task fired")
+                AppLogger.view.info("HomeDashboardView: .task fired")
                 // Small delay to let the view settle and avoid cancellation during navigation setup
                 try? await Task.sleep(for: .milliseconds(100))
                 guard !Task.isCancelled else {
-                    Logger.view.info("HomeDashboardView: .task cancelled during delay")
+                    AppLogger.view.info("HomeDashboardView: .task cancelled during delay")
                     return
                 }
                 await viewModel.loadDashboard()
             }
             #if os(iOS)
             .refreshable {
-                Logger.view.info("HomeDashboardView: Pull to refresh triggered")
+                AppLogger.view.info("HomeDashboardView: Pull to refresh triggered")
                 await viewModel.refreshDashboard()
             }
             #endif

@@ -1,5 +1,4 @@
 import SwiftUI
-import OSLog
 
 // MARK: - Users Dashboard View
 
@@ -30,13 +29,13 @@ struct UsersDashboardView: View {
             }
             .searchable(text: $userViewModel.searchText, prompt: "Search users...")
             .onChange(of: selectedProject) { _, newProject in
-                Logger.view.info("UsersDashboardView: selectedProject changed to \(newProject?.name ?? "All Projects")")
+                AppLogger.view.info("UsersDashboardView: selectedProject changed to \(newProject?.name ?? "All Projects")")
                 Task {
                     await userViewModel.loadUsers(projectId: newProject?.id)
                 }
             }
             .task {
-                Logger.view.info("UsersDashboardView: .task fired - loading all projects by default")
+                AppLogger.view.info("UsersDashboardView: .task fired - loading all projects by default")
                 // Load all projects by default (selectedProject is nil)
                 if userViewModel.users.isEmpty {
                     await userViewModel.loadUsers(projectId: nil)
@@ -44,7 +43,7 @@ struct UsersDashboardView: View {
             }
             #if os(iOS)
             .refreshable {
-                Logger.view.info("UsersDashboardView: Pull to refresh triggered")
+                AppLogger.view.info("UsersDashboardView: Pull to refresh triggered")
                 await userViewModel.loadUsers(projectId: selectedProject?.id)
             }
             #endif
@@ -54,7 +53,7 @@ struct UsersDashboardView: View {
                 Text(userViewModel.errorMessage ?? "An error occurred")
             }
             .onAppear {
-                Logger.view.info("UsersDashboardView: onAppear - selectedProject: \(self.selectedProject?.name ?? "nil"), projects count: \(self.projectViewModel.projects.count)")
+                AppLogger.view.info("UsersDashboardView: onAppear - selectedProject: \(self.selectedProject?.name ?? "nil"), projects count: \(self.projectViewModel.projects.count)")
             }
     }
 

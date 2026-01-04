@@ -163,10 +163,31 @@ The `UsersDashboardView` provides a dedicated tab for viewing SDK users (end use
 - **Custom**: Custom user identifiers provided by the app
 
 ### Logging
-Uses `Logger.swift` for centralized OSLog logging with categories:
-- `Logger.api` - API requests/responses
-- `Logger.viewModel` - ViewModel state changes
-- `Logger.view` - View lifecycle events
+Uses `Logger.swift` for centralized OSLog logging via `AppLogger` enum with configurable categories:
+
+```swift
+// Disable all Admin app logging
+AppLogger.isEnabled = false
+
+// Use category-specific loggers
+AppLogger.api.info("Loading projects...")
+AppLogger.auth.error("Login failed")
+AppLogger.viewModel.debug("State changed")
+AppLogger.view.info("View appeared")
+AppLogger.data.debug("Parsing response")
+AppLogger.keychain.info("Token saved")
+```
+
+**Categories:**
+- `AppLogger.api` - API requests/responses
+- `AppLogger.auth` - Authentication events
+- `AppLogger.viewModel` - ViewModel state changes
+- `AppLogger.view` - View lifecycle events
+- `AppLogger.data` - Model parsing, transformations
+- `AppLogger.keychain` - Secure storage operations
+
+**Logging Control:**
+- `AppLogger.isEnabled` - Global flag to enable/disable all logging (default: `true`)
 
 ## Developer Commands (DEBUG/TestFlight only)
 

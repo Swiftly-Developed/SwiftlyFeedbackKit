@@ -1,7 +1,4 @@
 import Foundation
-import OSLog
-
-private let logger = Logger(subsystem: "com.swiftlyfeedback.admin", category: "APIClient")
 
 actor AdminAPIClient {
     static let shared = AdminAPIClient()
@@ -24,7 +21,7 @@ actor AdminAPIClient {
         self.encoder.keyEncodingStrategy = .convertToSnakeCase
         self.encoder.dateEncodingStrategy = .iso8601
 
-        logger.info("AdminAPIClient initialized with baseURL: \(self.baseURL.absoluteString)")
+        AppLogger.api.info("AdminAPIClient initialized with baseURL: \(self.baseURL.absoluteString)")
     }
 
     private func makeRequest(
@@ -38,15 +35,15 @@ actor AdminAPIClient {
         request.httpMethod = method
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
 
-        logger.info("📤 Request: \(method) \(url.absoluteString)")
+        AppLogger.api.info("📤 Request: \(method) \(url.absoluteString)")
 
         if requiresAuth {
             guard let token = KeychainService.getToken() else {
-                logger.error("❌ No auth token found in keychain")
+                AppLogger.api.error("❌ No auth token found in keychain")
                 throw APIError.unauthorized
             }
             request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-            logger.debug("🔑 Auth token attached (length: \(token.count))")
+            AppLogger.api.debug("🔑 Auth token attached (length: \(token.count))")
         }
 
         if let body = body {
@@ -54,124 +51,124 @@ actor AdminAPIClient {
                 let bodyData = try encoder.encode(body)
                 request.httpBody = bodyData
                 if let bodyString = String(data: bodyData, encoding: .utf8) {
-                    logger.debug("📦 Request body: \(bodyString)")
+                    AppLogger.api.debug("📦 Request body: \(bodyString)")
                 }
             } catch {
-                logger.error("❌ Failed to encode request body: \(error.localizedDescription)")
+                AppLogger.api.error("❌ Failed to encode request body: \(error.localizedDescription)")
                 throw error
             }
         }
 
         do {
-            logger.info("🌐 Sending request to \(url.absoluteString)...")
+            AppLogger.api.info("🌐 Sending request to \(url.absoluteString)...")
             let (data, response) = try await session.data(for: request)
 
             if let httpResponse = response as? HTTPURLResponse {
-                logger.info("📥 Response: \(httpResponse.statusCode) for \(method) \(path)")
+                AppLogger.api.info("📥 Response: \(httpResponse.statusCode) for \(method) \(path)")
 
                 if let responseString = String(data: data, encoding: .utf8) {
                     if data.count < 1000 {
-                        logger.debug("📄 Response body: \(responseString)")
+                        AppLogger.api.debug("📄 Response body: \(responseString)")
                     } else {
-                        logger.debug("📄 Response body (truncated): \(responseString.prefix(500))...")
+                        AppLogger.api.debug("📄 Response body (truncated): \(responseString.prefix(500))...")
                     }
                 }
             }
 
             return (data, response)
         } catch let error as URLError {
-            logger.error("❌ URLError: \(error.code.rawValue) - \(error.localizedDescription)")
-            logger.error("❌ URLError details - code: \(error.code.rawValue), failingURL: \(error.failingURL?.absoluteString ?? "nil")")
+            AppLogger.api.error("❌ URLError: \(error.code.rawValue) - \(error.localizedDescription)")
+            AppLogger.api.error("❌ URLError details - code: \(error.code.rawValue), failingURL: \(error.failingURL?.absoluteString ?? "nil")")
             throw APIError.networkError(error)
         } catch {
-            logger.error("❌ Network error: \(error.localizedDescription)")
-            logger.error("❌ Error type: \(type(of: error))")
+            AppLogger.api.error("❌ Network error: \(error.localizedDescription)")
+            AppLogger.api.error("❌ Error type: \(type(of: error))")
             throw APIError.networkError(error)
         }
     }
 
     func get<T: Decodable>(path: String, requiresAuth: Bool = true) async throws -> T {
-        logger.info("🔵 GET \(path)")
+        AppLogger.api.info("🔵 GET \(path)")
         let (data, response) = try await makeRequest(path: path, method: "GET", requiresAuth: requiresAuth)
         try validateResponse(response, data: data, path: path)
         do {
             let decoded = try decoder.decode(T.self, from: data)
-            logger.info("✅ GET \(path) - decoded successfully")
+            AppLogger.api.info("✅ GET \(path) - decoded successfully")
             return decoded
         } catch {
-            logger.error("❌ GET \(path) - decoding failed: \(error.localizedDescription)")
+            AppLogger.api.error("❌ GET \(path) - decoding failed: \(error.localizedDescription)")
             throw APIError.decodingError(error)
         }
     }
 
     func post<T: Decodable, B: Encodable>(path: String, body: B, requiresAuth: Bool = true) async throws -> T {
-        logger.info("🟢 POST \(path) (with body)")
+        AppLogger.api.info("🟢 POST \(path) (with body)")
         let (data, response) = try await makeRequest(path: path, method: "POST", body: body, requiresAuth: requiresAuth)
         try validateResponse(response, data: data, path: path)
         do {
             let decoded = try decoder.decode(T.self, from: data)
-            logger.info("✅ POST \(path) - decoded successfully")
+            AppLogger.api.info("✅ POST \(path) - decoded successfully")
             return decoded
         } catch {
-            logger.error("❌ POST \(path) - decoding failed: \(error.localizedDescription)")
+            AppLogger.api.error("❌ POST \(path) - decoding failed: \(error.localizedDescription)")
             throw APIError.decodingError(error)
         }
     }
 
     func post(path: String, requiresAuth: Bool = true) async throws {
-        logger.info("🟢 POST \(path) (no body, no response)")
+        AppLogger.api.info("🟢 POST \(path) (no body, no response)")
         let (data, response) = try await makeRequest(path: path, method: "POST", requiresAuth: requiresAuth)
         try validateResponse(response, data: data, path: path)
-        logger.info("✅ POST \(path) - completed")
+        AppLogger.api.info("✅ POST \(path) - completed")
     }
 
     func post<T: Decodable>(path: String, requiresAuth: Bool = true) async throws -> T {
-        logger.info("🟢 POST \(path) (no body, with response)")
+        AppLogger.api.info("🟢 POST \(path) (no body, with response)")
         let (data, response) = try await makeRequest(path: path, method: "POST", requiresAuth: requiresAuth)
         try validateResponse(response, data: data, path: path)
         do {
             let decoded = try decoder.decode(T.self, from: data)
-            logger.info("✅ POST \(path) - decoded successfully")
+            AppLogger.api.info("✅ POST \(path) - decoded successfully")
             return decoded
         } catch {
-            logger.error("❌ POST \(path) - decoding failed: \(error.localizedDescription)")
+            AppLogger.api.error("❌ POST \(path) - decoding failed: \(error.localizedDescription)")
             throw APIError.decodingError(error)
         }
     }
 
     func patch<T: Decodable, B: Encodable>(path: String, body: B, requiresAuth: Bool = true) async throws -> T {
-        logger.info("🟠 PATCH \(path)")
+        AppLogger.api.info("🟠 PATCH \(path)")
         let (data, response) = try await makeRequest(path: path, method: "PATCH", body: body, requiresAuth: requiresAuth)
         try validateResponse(response, data: data, path: path)
         do {
             let decoded = try decoder.decode(T.self, from: data)
-            logger.info("✅ PATCH \(path) - decoded successfully")
+            AppLogger.api.info("✅ PATCH \(path) - decoded successfully")
             return decoded
         } catch {
-            logger.error("❌ PATCH \(path) - decoding failed: \(error.localizedDescription)")
+            AppLogger.api.error("❌ PATCH \(path) - decoding failed: \(error.localizedDescription)")
             throw APIError.decodingError(error)
         }
     }
 
     func put<B: Encodable>(path: String, body: B, requiresAuth: Bool = true) async throws {
-        logger.info("🟡 PUT \(path)")
+        AppLogger.api.info("🟡 PUT \(path)")
         let (data, response) = try await makeRequest(path: path, method: "PUT", body: body, requiresAuth: requiresAuth)
         try validateResponse(response, data: data, path: path)
-        logger.info("✅ PUT \(path) - completed")
+        AppLogger.api.info("✅ PUT \(path) - completed")
     }
 
     func delete(path: String, requiresAuth: Bool = true) async throws {
-        logger.info("🔴 DELETE \(path)")
+        AppLogger.api.info("🔴 DELETE \(path)")
         let (data, response) = try await makeRequest(path: path, method: "DELETE", requiresAuth: requiresAuth)
         try validateResponse(response, data: data, path: path)
-        logger.info("✅ DELETE \(path) - completed")
+        AppLogger.api.info("✅ DELETE \(path) - completed")
     }
 
     func delete<B: Encodable>(path: String, body: B, requiresAuth: Bool = true) async throws {
-        logger.info("🔴 DELETE \(path) (with body)")
+        AppLogger.api.info("🔴 DELETE \(path) (with body)")
         let (data, response) = try await makeRequest(path: path, method: "DELETE", body: body, requiresAuth: requiresAuth)
         try validateResponse(response, data: data, path: path)
-        logger.info("✅ DELETE \(path) - completed")
+        AppLogger.api.info("✅ DELETE \(path) - completed")
     }
 
     // MARK: - Feedback API (uses X-API-Key)
@@ -191,48 +188,48 @@ actor AdminAPIClient {
             path += "?" + queryParams.joined(separator: "&")
         }
 
-        logger.info("🔵 GET \(path) (with API key)")
+        AppLogger.api.info("🔵 GET \(path) (with API key)")
         let (data, response) = try await makeRequestWithApiKey(path: path, method: "GET", apiKey: apiKey)
         try validateResponse(response, data: data, path: path)
 
         do {
             let decoded = try decoder.decode([Feedback].self, from: data)
-            logger.info("✅ GET \(path) - decoded \(decoded.count) feedbacks")
+            AppLogger.api.info("✅ GET \(path) - decoded \(decoded.count) feedbacks")
             return decoded
         } catch {
-            logger.error("❌ GET \(path) - decoding failed: \(error.localizedDescription)")
+            AppLogger.api.error("❌ GET \(path) - decoding failed: \(error.localizedDescription)")
             throw APIError.decodingError(error)
         }
     }
 
     func getFeedback(id: UUID, apiKey: String) async throws -> Feedback {
         let path = "feedbacks/\(id)"
-        logger.info("🔵 GET \(path) (with API key)")
+        AppLogger.api.info("🔵 GET \(path) (with API key)")
         let (data, response) = try await makeRequestWithApiKey(path: path, method: "GET", apiKey: apiKey)
         try validateResponse(response, data: data, path: path)
 
         do {
             let decoded = try decoder.decode(Feedback.self, from: data)
-            logger.info("✅ GET \(path) - decoded successfully")
+            AppLogger.api.info("✅ GET \(path) - decoded successfully")
             return decoded
         } catch {
-            logger.error("❌ GET \(path) - decoding failed: \(error.localizedDescription)")
+            AppLogger.api.error("❌ GET \(path) - decoding failed: \(error.localizedDescription)")
             throw APIError.decodingError(error)
         }
     }
 
     func getComments(feedbackId: UUID, apiKey: String) async throws -> [Comment] {
         let path = "feedbacks/\(feedbackId)/comments"
-        logger.info("🔵 GET \(path) (with API key)")
+        AppLogger.api.info("🔵 GET \(path) (with API key)")
         let (data, response) = try await makeRequestWithApiKey(path: path, method: "GET", apiKey: apiKey)
         try validateResponse(response, data: data, path: path)
 
         do {
             let decoded = try decoder.decode([Comment].self, from: data)
-            logger.info("✅ GET \(path) - decoded \(decoded.count) comments")
+            AppLogger.api.info("✅ GET \(path) - decoded \(decoded.count) comments")
             return decoded
         } catch {
-            logger.error("❌ GET \(path) - decoding failed: \(error.localizedDescription)")
+            AppLogger.api.error("❌ GET \(path) - decoding failed: \(error.localizedDescription)")
             throw APIError.decodingError(error)
         }
     }
@@ -241,26 +238,26 @@ actor AdminAPIClient {
         let path = "feedbacks/\(feedbackId)/comments"
         let body = CreateCommentRequest(content: content, userId: userId, isAdmin: isAdmin)
 
-        logger.info("🟢 POST \(path) (with API key)")
+        AppLogger.api.info("🟢 POST \(path) (with API key)")
         let (data, response) = try await makeRequestWithApiKey(path: path, method: "POST", body: body, apiKey: apiKey)
         try validateResponse(response, data: data, path: path)
 
         do {
             let decoded = try decoder.decode(Comment.self, from: data)
-            logger.info("✅ POST \(path) - decoded successfully")
+            AppLogger.api.info("✅ POST \(path) - decoded successfully")
             return decoded
         } catch {
-            logger.error("❌ POST \(path) - decoding failed: \(error.localizedDescription)")
+            AppLogger.api.error("❌ POST \(path) - decoding failed: \(error.localizedDescription)")
             throw APIError.decodingError(error)
         }
     }
 
     func deleteComment(feedbackId: UUID, commentId: UUID, apiKey: String) async throws {
         let path = "feedbacks/\(feedbackId)/comments/\(commentId)"
-        logger.info("🔴 DELETE \(path) (with API key)")
+        AppLogger.api.info("🔴 DELETE \(path) (with API key)")
         let (data, response) = try await makeRequestWithApiKey(path: path, method: "DELETE", apiKey: apiKey)
         try validateResponse(response, data: data, path: path)
-        logger.info("✅ DELETE \(path) - completed")
+        AppLogger.api.info("✅ DELETE \(path) - completed")
     }
 
     func createFeedback(
@@ -280,16 +277,16 @@ actor AdminAPIClient {
             userEmail: userEmail
         )
 
-        logger.info("🟢 POST \(path) (with API key)")
+        AppLogger.api.info("🟢 POST \(path) (with API key)")
         let (data, response) = try await makeRequestWithApiKey(path: path, method: "POST", body: body, apiKey: apiKey)
         try validateResponse(response, data: data, path: path)
 
         do {
             let decoded = try decoder.decode(Feedback.self, from: data)
-            logger.info("✅ POST \(path) - decoded successfully")
+            AppLogger.api.info("✅ POST \(path) - decoded successfully")
             return decoded
         } catch {
-            logger.error("❌ POST \(path) - decoding failed: \(error.localizedDescription)")
+            AppLogger.api.error("❌ POST \(path) - decoding failed: \(error.localizedDescription)")
             throw APIError.decodingError(error)
         }
     }
@@ -306,82 +303,82 @@ actor AdminAPIClient {
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue(apiKey, forHTTPHeaderField: "X-API-Key")
 
-        logger.info("📤 Request: \(method) \(url.absoluteString) (API key)")
+        AppLogger.api.info("📤 Request: \(method) \(url.absoluteString) (API key)")
 
         if let body = body {
             do {
                 let bodyData = try encoder.encode(body)
                 request.httpBody = bodyData
                 if let bodyString = String(data: bodyData, encoding: .utf8) {
-                    logger.debug("📦 Request body: \(bodyString)")
+                    AppLogger.api.debug("📦 Request body: \(bodyString)")
                 }
             } catch {
-                logger.error("❌ Failed to encode request body: \(error.localizedDescription)")
+                AppLogger.api.error("❌ Failed to encode request body: \(error.localizedDescription)")
                 throw error
             }
         }
 
         do {
-            logger.info("🌐 Sending request to \(url.absoluteString)...")
+            AppLogger.api.info("🌐 Sending request to \(url.absoluteString)...")
             let (data, response) = try await session.data(for: request)
 
             if let httpResponse = response as? HTTPURLResponse {
-                logger.info("📥 Response: \(httpResponse.statusCode) for \(method) \(path)")
+                AppLogger.api.info("📥 Response: \(httpResponse.statusCode) for \(method) \(path)")
 
                 if let responseString = String(data: data, encoding: .utf8) {
                     if data.count < 1000 {
-                        logger.debug("📄 Response body: \(responseString)")
+                        AppLogger.api.debug("📄 Response body: \(responseString)")
                     } else {
-                        logger.debug("📄 Response body (truncated): \(responseString.prefix(500))...")
+                        AppLogger.api.debug("📄 Response body (truncated): \(responseString.prefix(500))...")
                     }
                 }
             }
 
             return (data, response)
         } catch let error as URLError {
-            logger.error("❌ URLError: \(error.code.rawValue) - \(error.localizedDescription)")
+            AppLogger.api.error("❌ URLError: \(error.code.rawValue) - \(error.localizedDescription)")
             throw APIError.networkError(error)
         } catch {
-            logger.error("❌ Network error: \(error.localizedDescription)")
+            AppLogger.api.error("❌ Network error: \(error.localizedDescription)")
             throw APIError.networkError(error)
         }
     }
 
     private func validateResponse(_ response: URLResponse, data: Data, path: String) throws {
         guard let httpResponse = response as? HTTPURLResponse else {
-            logger.error("❌ \(path) - Invalid response (not HTTPURLResponse)")
+            AppLogger.api.error("❌ \(path) - Invalid response (not HTTPURLResponse)")
             throw APIError.invalidResponse
         }
 
         let statusCode = httpResponse.statusCode
-        logger.info("🔍 Validating response for \(path): status \(statusCode)")
+        AppLogger.api.info("🔍 Validating response for \(path): status \(statusCode)")
 
         switch statusCode {
         case 200...299:
-            logger.debug("✅ \(path) - Status \(statusCode) OK")
+            AppLogger.api.debug("✅ \(path) - Status \(statusCode) OK")
             return
         case 401:
-            logger.error("❌ \(path) - 401 Unauthorized")
+            AppLogger.api.error("❌ \(path) - 401 Unauthorized")
             throw APIError.unauthorized
         case 403:
             let message = parseErrorMessage(data)
-            logger.error("❌ \(path) - 403 Forbidden: \(message)")
+            AppLogger.api.error("❌ \(path) - 403 Forbidden: \(message)")
             throw APIError.forbidden(message)
         case 404:
             let message = parseErrorMessage(data)
-            logger.error("❌ \(path) - 404 Not Found: \(message)")
+            AppLogger.api.error("❌ \(path) - 404 Not Found: \(message)")
             throw APIError.notFound(message)
         case 409:
             let message = parseErrorMessage(data)
-            logger.error("❌ \(path) - 409 Conflict: \(message)")
+            AppLogger.api.error("❌ \(path) - 409 Conflict: \(message)")
             throw APIError.conflict(message)
         case 400:
             let message = parseErrorMessage(data)
-            logger.error("❌ \(path) - 400 Bad Request: \(message)")
+            AppLogger.api.error("❌ \(path) - 400 Bad Request: \(message)")
             throw APIError.badRequest(message)
         default:
             let message = parseErrorMessage(data)
-            logger.error("❌ \(path) - \(statusCode) Server Error: \(message)")
+            AppLogger.api.error("❌ \(path) - \(statusCode) Server Error: \(message)")
             throw APIError.serverError(statusCode, message)
         }
     }
@@ -401,92 +398,92 @@ actor AdminAPIClient {
 
     func getSDKUsers(projectId: UUID) async throws -> [SDKUser] {
         let path = "users/project/\(projectId)"
-        logger.info("🔵 GET \(path) (SDK users)")
+        AppLogger.api.info("🔵 GET \(path) (SDK users)")
         let (data, response) = try await makeRequest(path: path, method: "GET", requiresAuth: true)
         try validateResponse(response, data: data, path: path)
 
         do {
-            logger.debug("📊 SDK Users - attempting to decode \(data.count) bytes")
+            AppLogger.api.debug("📊 SDK Users - attempting to decode \(data.count) bytes")
             if let rawJSON = String(data: data, encoding: .utf8) {
-                logger.debug("📊 SDK Users - raw JSON: \(rawJSON)")
+                AppLogger.api.debug("📊 SDK Users - raw JSON: \(rawJSON)")
             }
             let decoded = try decoder.decode([SDKUser].self, from: data)
-            logger.info("✅ GET \(path) - decoded \(decoded.count) SDK users")
+            AppLogger.api.info("✅ GET \(path) - decoded \(decoded.count) SDK users")
             return decoded
         } catch let decodingError as DecodingError {
-            logger.error("❌ GET \(path) - DecodingError: \(self.describeDecodingError(decodingError))")
+            AppLogger.api.error("❌ GET \(path) - DecodingError: \(self.describeDecodingError(decodingError))")
             if let rawJSON = String(data: data, encoding: .utf8) {
-                logger.error("❌ Raw JSON that failed to decode: \(rawJSON)")
+                AppLogger.api.error("❌ Raw JSON that failed to decode: \(rawJSON)")
             }
             throw APIError.decodingError(decodingError)
         } catch {
-            logger.error("❌ GET \(path) - decoding failed: \(error.localizedDescription)")
+            AppLogger.api.error("❌ GET \(path) - decoding failed: \(error.localizedDescription)")
             throw APIError.decodingError(error)
         }
     }
 
     func getAllSDKUsers() async throws -> [SDKUser] {
         let path = "users/all"
-        logger.info("🔵 GET \(path) (all SDK users)")
+        AppLogger.api.info("🔵 GET \(path) (all SDK users)")
         let (data, response) = try await makeRequest(path: path, method: "GET", requiresAuth: true)
         try validateResponse(response, data: data, path: path)
 
         do {
-            logger.debug("📊 All SDK Users - attempting to decode \(data.count) bytes")
+            AppLogger.api.debug("📊 All SDK Users - attempting to decode \(data.count) bytes")
             let decoded = try decoder.decode([SDKUser].self, from: data)
-            logger.info("✅ GET \(path) - decoded \(decoded.count) SDK users")
+            AppLogger.api.info("✅ GET \(path) - decoded \(decoded.count) SDK users")
             return decoded
         } catch let decodingError as DecodingError {
-            logger.error("❌ GET \(path) - DecodingError: \(self.describeDecodingError(decodingError))")
+            AppLogger.api.error("❌ GET \(path) - DecodingError: \(self.describeDecodingError(decodingError))")
             throw APIError.decodingError(decodingError)
         } catch {
-            logger.error("❌ GET \(path) - decoding failed: \(error.localizedDescription)")
+            AppLogger.api.error("❌ GET \(path) - decoding failed: \(error.localizedDescription)")
             throw APIError.decodingError(error)
         }
     }
 
     func getAllSDKUserStats() async throws -> SDKUserStats {
         let path = "users/all/stats"
-        logger.info("🔵 GET \(path) (all SDK user stats)")
+        AppLogger.api.info("🔵 GET \(path) (all SDK user stats)")
         let (data, response) = try await makeRequest(path: path, method: "GET", requiresAuth: true)
         try validateResponse(response, data: data, path: path)
 
         do {
-            logger.debug("📊 All SDK User Stats - attempting to decode \(data.count) bytes")
+            AppLogger.api.debug("📊 All SDK User Stats - attempting to decode \(data.count) bytes")
             let decoded = try decoder.decode(SDKUserStats.self, from: data)
-            logger.info("✅ GET \(path) - decoded SDK user stats: totalUsers=\(decoded.totalUsers), totalMrr=\(decoded.totalMrr)")
+            AppLogger.api.info("✅ GET \(path) - decoded SDK user stats: totalUsers=\(decoded.totalUsers), totalMrr=\(decoded.totalMrr)")
             return decoded
         } catch let decodingError as DecodingError {
-            logger.error("❌ GET \(path) - DecodingError: \(self.describeDecodingError(decodingError))")
+            AppLogger.api.error("❌ GET \(path) - DecodingError: \(self.describeDecodingError(decodingError))")
             throw APIError.decodingError(decodingError)
         } catch {
-            logger.error("❌ GET \(path) - decoding failed: \(error.localizedDescription)")
+            AppLogger.api.error("❌ GET \(path) - decoding failed: \(error.localizedDescription)")
             throw APIError.decodingError(error)
         }
     }
 
     func getSDKUserStats(projectId: UUID) async throws -> SDKUserStats {
         let path = "users/project/\(projectId)/stats"
-        logger.info("🔵 GET \(path) (SDK user stats)")
+        AppLogger.api.info("🔵 GET \(path) (SDK user stats)")
         let (data, response) = try await makeRequest(path: path, method: "GET", requiresAuth: true)
         try validateResponse(response, data: data, path: path)
 
         do {
-            logger.debug("📊 SDK User Stats - attempting to decode \(data.count) bytes")
+            AppLogger.api.debug("📊 SDK User Stats - attempting to decode \(data.count) bytes")
             if let rawJSON = String(data: data, encoding: .utf8) {
-                logger.debug("📊 SDK User Stats - raw JSON: \(rawJSON)")
+                AppLogger.api.debug("📊 SDK User Stats - raw JSON: \(rawJSON)")
             }
             let decoded = try decoder.decode(SDKUserStats.self, from: data)
-            logger.info("✅ GET \(path) - decoded SDK user stats: totalUsers=\(decoded.totalUsers), totalMrr=\(decoded.totalMrr)")
+            AppLogger.api.info("✅ GET \(path) - decoded SDK user stats: totalUsers=\(decoded.totalUsers), totalMrr=\(decoded.totalMrr)")
             return decoded
         } catch let decodingError as DecodingError {
-            logger.error("❌ GET \(path) - DecodingError: \(self.describeDecodingError(decodingError))")
+            AppLogger.api.error("❌ GET \(path) - DecodingError: \(self.describeDecodingError(decodingError))")
             if let rawJSON = String(data: data, encoding: .utf8) {
-                logger.error("❌ Raw JSON that failed to decode: \(rawJSON)")
+                AppLogger.api.error("❌ Raw JSON that failed to decode: \(rawJSON)")
             }
             throw APIError.decodingError(decodingError)
         } catch {
-            logger.error("❌ GET \(path) - decoding failed: \(error.localizedDescription)")
+            AppLogger.api.error("❌ GET \(path) - decoding failed: \(error.localizedDescription)")
             throw APIError.decodingError(error)
         }
     }
@@ -495,66 +492,66 @@ actor AdminAPIClient {
 
     func getAllViewEventStats() async throws -> ViewEventsOverview {
         let path = "events/all/stats"
-        logger.info("🔵 GET \(path) (all view event stats)")
+        AppLogger.api.info("🔵 GET \(path) (all view event stats)")
         let (data, response) = try await makeRequest(path: path, method: "GET", requiresAuth: true)
         try validateResponse(response, data: data, path: path)
 
         do {
-            logger.debug("📊 All View Event Stats - attempting to decode \(data.count) bytes")
+            AppLogger.api.debug("📊 All View Event Stats - attempting to decode \(data.count) bytes")
             let decoded = try decoder.decode(ViewEventsOverview.self, from: data)
-            logger.info("✅ GET \(path) - decoded view event stats: totalEvents=\(decoded.totalEvents), uniqueUsers=\(decoded.uniqueUsers)")
+            AppLogger.api.info("✅ GET \(path) - decoded view event stats: totalEvents=\(decoded.totalEvents), uniqueUsers=\(decoded.uniqueUsers)")
             return decoded
         } catch let decodingError as DecodingError {
-            logger.error("❌ GET \(path) - DecodingError: \(self.describeDecodingError(decodingError))")
+            AppLogger.api.error("❌ GET \(path) - DecodingError: \(self.describeDecodingError(decodingError))")
             throw APIError.decodingError(decodingError)
         } catch {
-            logger.error("❌ GET \(path) - decoding failed: \(error.localizedDescription)")
+            AppLogger.api.error("❌ GET \(path) - decoding failed: \(error.localizedDescription)")
             throw APIError.decodingError(error)
         }
     }
 
     func getViewEventStats(projectId: UUID) async throws -> ViewEventsOverview {
         let path = "events/project/\(projectId)/stats"
-        logger.info("🔵 GET \(path) (view event stats)")
+        AppLogger.api.info("🔵 GET \(path) (view event stats)")
         let (data, response) = try await makeRequest(path: path, method: "GET", requiresAuth: true)
         try validateResponse(response, data: data, path: path)
 
         do {
-            logger.debug("📊 View Event Stats - attempting to decode \(data.count) bytes")
+            AppLogger.api.debug("📊 View Event Stats - attempting to decode \(data.count) bytes")
             if let rawJSON = String(data: data, encoding: .utf8) {
-                logger.debug("📊 View Event Stats - raw JSON: \(rawJSON)")
+                AppLogger.api.debug("📊 View Event Stats - raw JSON: \(rawJSON)")
             }
             let decoded = try decoder.decode(ViewEventsOverview.self, from: data)
-            logger.info("✅ GET \(path) - decoded view event stats: totalEvents=\(decoded.totalEvents), uniqueUsers=\(decoded.uniqueUsers)")
+            AppLogger.api.info("✅ GET \(path) - decoded view event stats: totalEvents=\(decoded.totalEvents), uniqueUsers=\(decoded.uniqueUsers)")
             return decoded
         } catch let decodingError as DecodingError {
-            logger.error("❌ GET \(path) - DecodingError: \(self.describeDecodingError(decodingError))")
+            AppLogger.api.error("❌ GET \(path) - DecodingError: \(self.describeDecodingError(decodingError))")
             if let rawJSON = String(data: data, encoding: .utf8) {
-                logger.error("❌ Raw JSON that failed to decode: \(rawJSON)")
+                AppLogger.api.error("❌ Raw JSON that failed to decode: \(rawJSON)")
             }
             throw APIError.decodingError(decodingError)
         } catch {
-            logger.error("❌ GET \(path) - decoding failed: \(error.localizedDescription)")
+            AppLogger.api.error("❌ GET \(path) - decoding failed: \(error.localizedDescription)")
             throw APIError.decodingError(error)
         }
     }
 
     func getViewEvents(projectId: UUID) async throws -> [ViewEvent] {
         let path = "events/project/\(projectId)"
-        logger.info("🔵 GET \(path) (view events)")
+        AppLogger.api.info("🔵 GET \(path) (view events)")
         let (data, response) = try await makeRequest(path: path, method: "GET", requiresAuth: true)
         try validateResponse(response, data: data, path: path)
 
         do {
-            logger.debug("📊 View Events - attempting to decode \(data.count) bytes")
+            AppLogger.api.debug("📊 View Events - attempting to decode \(data.count) bytes")
             let decoded = try decoder.decode([ViewEvent].self, from: data)
-            logger.info("✅ GET \(path) - decoded \(decoded.count) view events")
+            AppLogger.api.info("✅ GET \(path) - decoded \(decoded.count) view events")
             return decoded
         } catch let decodingError as DecodingError {
-            logger.error("❌ GET \(path) - DecodingError: \(self.describeDecodingError(decodingError))")
+            AppLogger.api.error("❌ GET \(path) - DecodingError: \(self.describeDecodingError(decodingError))")
             throw APIError.decodingError(decodingError)
         } catch {
-            logger.error("❌ GET \(path) - decoding failed: \(error.localizedDescription)")
+            AppLogger.api.error("❌ GET \(path) - decoding failed: \(error.localizedDescription)")
             throw APIError.decodingError(error)
         }
     }
@@ -568,16 +565,16 @@ actor AdminAPIClient {
             notifyNewComments: notifyNewComments
         )
 
-        logger.info("🟠 PATCH \(path) (notification settings)")
+        AppLogger.api.info("🟠 PATCH \(path) (notification settings)")
         let (data, response) = try await makeRequest(path: path, method: "PATCH", body: body, requiresAuth: true)
         try validateResponse(response, data: data, path: path)
 
         do {
             let decoded = try decoder.decode(User.self, from: data)
-            logger.info("✅ PATCH \(path) - decoded successfully")
+            AppLogger.api.info("✅ PATCH \(path) - decoded successfully")
             return decoded
         } catch {
-            logger.error("❌ PATCH \(path) - decoding failed: \(error.localizedDescription)")
+            AppLogger.api.error("❌ PATCH \(path) - decoding failed: \(error.localizedDescription)")
             throw APIError.decodingError(error)
         }
     }
@@ -599,16 +596,16 @@ actor AdminAPIClient {
             slackNotifyStatusChanges: slackNotifyStatusChanges
         )
 
-        logger.info("🟠 PATCH \(path) (slack settings)")
+        AppLogger.api.info("🟠 PATCH \(path) (slack settings)")
         let (data, response) = try await makeRequest(path: path, method: "PATCH", body: body, requiresAuth: true)
         try validateResponse(response, data: data, path: path)
 
         do {
             let decoded = try decoder.decode(Project.self, from: data)
-            logger.info("✅ PATCH \(path) - decoded successfully")
+            AppLogger.api.info("✅ PATCH \(path) - decoded successfully")
             return decoded
         } catch {
-            logger.error("❌ PATCH \(path) - decoding failed: \(error.localizedDescription)")
+            AppLogger.api.error("❌ PATCH \(path) - decoding failed: \(error.localizedDescription)")
             throw APIError.decodingError(error)
         }
     }
@@ -622,16 +619,16 @@ actor AdminAPIClient {
         let path = "projects/\(projectId)/statuses"
         let body = UpdateProjectStatusesRequest(allowedStatuses: allowedStatuses)
 
-        logger.info("🟠 PATCH \(path) (allowed statuses)")
+        AppLogger.api.info("🟠 PATCH \(path) (allowed statuses)")
         let (data, response) = try await makeRequest(path: path, method: "PATCH", body: body, requiresAuth: true)
         try validateResponse(response, data: data, path: path)
 
         do {
             let decoded = try decoder.decode(Project.self, from: data)
-            logger.info("✅ PATCH \(path) - decoded successfully")
+            AppLogger.api.info("✅ PATCH \(path) - decoded successfully")
             return decoded
         } catch {
-            logger.error("❌ PATCH \(path) - decoding failed: \(error.localizedDescription)")
+            AppLogger.api.error("❌ PATCH \(path) - decoding failed: \(error.localizedDescription)")
             throw APIError.decodingError(error)
         }
     }
@@ -655,16 +652,16 @@ actor AdminAPIClient {
             githubSyncStatus: githubSyncStatus
         )
 
-        logger.info("🟠 PATCH \(path) (GitHub settings)")
+        AppLogger.api.info("🟠 PATCH \(path) (GitHub settings)")
         let (data, response) = try await makeRequest(path: path, method: "PATCH", body: body, requiresAuth: true)
         try validateResponse(response, data: data, path: path)
 
         do {
             let decoded = try decoder.decode(Project.self, from: data)
-            logger.info("✅ PATCH \(path) - decoded successfully")
+            AppLogger.api.info("✅ PATCH \(path) - decoded successfully")
             return decoded
         } catch {
-            logger.error("❌ PATCH \(path) - decoding failed: \(error.localizedDescription)")
+            AppLogger.api.error("❌ PATCH \(path) - decoding failed: \(error.localizedDescription)")
             throw APIError.decodingError(error)
         }
     }
@@ -680,16 +677,16 @@ actor AdminAPIClient {
             additionalLabels: additionalLabels
         )
 
-        logger.info("🟢 POST \(path) (create GitHub issue)")
+        AppLogger.api.info("🟢 POST \(path) (create GitHub issue)")
         let (data, response) = try await makeRequest(path: path, method: "POST", body: body, requiresAuth: true)
         try validateResponse(response, data: data, path: path)
 
         do {
             let decoded = try decoder.decode(CreateGitHubIssueResponse.self, from: data)
-            logger.info("✅ POST \(path) - decoded successfully")
+            AppLogger.api.info("✅ POST \(path) - decoded successfully")
             return decoded
         } catch {
-            logger.error("❌ POST \(path) - decoding failed: \(error.localizedDescription)")
+            AppLogger.api.error("❌ POST \(path) - decoding failed: \(error.localizedDescription)")
             throw APIError.decodingError(error)
         }
     }
@@ -705,16 +702,16 @@ actor AdminAPIClient {
             additionalLabels: additionalLabels
         )
 
-        logger.info("🟢 POST \(path) (bulk create GitHub issues)")
+        AppLogger.api.info("🟢 POST \(path) (bulk create GitHub issues)")
         let (data, response) = try await makeRequest(path: path, method: "POST", body: body, requiresAuth: true)
         try validateResponse(response, data: data, path: path)
 
         do {
             let decoded = try decoder.decode(BulkCreateGitHubIssuesResponse.self, from: data)
-            logger.info("✅ POST \(path) - decoded: \(decoded.created.count) created, \(decoded.failed.count) failed")
+            AppLogger.api.info("✅ POST \(path) - decoded: \(decoded.created.count) created, \(decoded.failed.count) failed")
             return decoded
         } catch {
-            logger.error("❌ POST \(path) - decoding failed: \(error.localizedDescription)")
+            AppLogger.api.error("❌ POST \(path) - decoding failed: \(error.localizedDescription)")
             throw APIError.decodingError(error)
         }
     }
@@ -725,16 +722,16 @@ actor AdminAPIClient {
         let path = "feedbacks/merge"
         let body = MergeFeedbackRequest(primaryFeedbackId: primaryId, secondaryFeedbackIds: secondaryIds)
 
-        logger.info("🟢 POST \(path) (merge feedback)")
+        AppLogger.api.info("🟢 POST \(path) (merge feedback)")
         let (data, response) = try await makeRequest(path: path, method: "POST", body: body, requiresAuth: true)
         try validateResponse(response, data: data, path: path)
 
         do {
             let decoded = try decoder.decode(MergeFeedbackResponse.self, from: data)
-            logger.info("✅ POST \(path) - merged \(decoded.mergedCount) feedbacks")
+            AppLogger.api.info("✅ POST \(path) - merged \(decoded.mergedCount) feedbacks")
             return decoded
         } catch {
-            logger.error("❌ POST \(path) - decoding failed: \(error.localizedDescription)")
+            AppLogger.api.error("❌ POST \(path) - decoding failed: \(error.localizedDescription)")
             throw APIError.decodingError(error)
         }
     }
@@ -743,26 +740,26 @@ actor AdminAPIClient {
 
     func getHomeDashboard() async throws -> HomeDashboard {
         let path = "dashboard/home"
-        logger.info("🔵 GET \(path) (home dashboard)")
+        AppLogger.api.info("🔵 GET \(path) (home dashboard)")
         let (data, response) = try await makeRequest(path: path, method: "GET", requiresAuth: true)
         try validateResponse(response, data: data, path: path)
 
         do {
-            logger.debug("📊 Home Dashboard - attempting to decode \(data.count) bytes")
+            AppLogger.api.debug("📊 Home Dashboard - attempting to decode \(data.count) bytes")
             if let rawJSON = String(data: data, encoding: .utf8) {
-                logger.debug("📊 Home Dashboard - raw JSON: \(rawJSON)")
+                AppLogger.api.debug("📊 Home Dashboard - raw JSON: \(rawJSON)")
             }
             let decoded = try decoder.decode(HomeDashboard.self, from: data)
-            logger.info("✅ GET \(path) - decoded home dashboard: totalProjects=\(decoded.totalProjects), totalFeedback=\(decoded.totalFeedback)")
+            AppLogger.api.info("✅ GET \(path) - decoded home dashboard: totalProjects=\(decoded.totalProjects), totalFeedback=\(decoded.totalFeedback)")
             return decoded
         } catch let decodingError as DecodingError {
-            logger.error("❌ GET \(path) - DecodingError: \(self.describeDecodingError(decodingError))")
+            AppLogger.api.error("❌ GET \(path) - DecodingError: \(self.describeDecodingError(decodingError))")
             if let rawJSON = String(data: data, encoding: .utf8) {
-                logger.error("❌ Raw JSON that failed to decode: \(rawJSON)")
+                AppLogger.api.error("❌ Raw JSON that failed to decode: \(rawJSON)")
             }
             throw APIError.decodingError(decodingError)
         } catch {
-            logger.error("❌ GET \(path) - decoding failed: \(error.localizedDescription)")
+            AppLogger.api.error("❌ GET \(path) - decoding failed: \(error.localizedDescription)")
             throw APIError.decodingError(error)
         }
     }

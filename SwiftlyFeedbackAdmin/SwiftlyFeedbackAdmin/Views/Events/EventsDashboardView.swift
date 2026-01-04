@@ -1,6 +1,5 @@
 import SwiftUI
 import Charts
-import OSLog
 
 // MARK: - Events Dashboard View
 
@@ -31,13 +30,13 @@ struct EventsDashboardView: View {
             }
             .searchable(text: $eventViewModel.searchText, prompt: "Search events...")
             .onChange(of: selectedProject) { _, newProject in
-                Logger.view.info("EventsDashboardView: selectedProject changed to \(newProject?.name ?? "All Projects")")
+                AppLogger.view.info("EventsDashboardView: selectedProject changed to \(newProject?.name ?? "All Projects")")
                 Task {
                     await eventViewModel.loadEvents(projectId: newProject?.id)
                 }
             }
             .task {
-                Logger.view.info("EventsDashboardView: .task fired - loading all projects by default")
+                AppLogger.view.info("EventsDashboardView: .task fired - loading all projects by default")
                 // Load all projects by default (selectedProject is nil)
                 if eventViewModel.overview == nil {
                     await eventViewModel.loadEvents(projectId: nil)
@@ -45,7 +44,7 @@ struct EventsDashboardView: View {
             }
             #if os(iOS)
             .refreshable {
-                Logger.view.info("EventsDashboardView: Pull to refresh triggered")
+                AppLogger.view.info("EventsDashboardView: Pull to refresh triggered")
                 await eventViewModel.loadEvents(projectId: selectedProject?.id)
             }
             #endif
@@ -55,7 +54,7 @@ struct EventsDashboardView: View {
                 Text(eventViewModel.errorMessage ?? "An error occurred")
             }
             .onAppear {
-                Logger.view.info("EventsDashboardView: onAppear - selectedProject: \(self.selectedProject?.name ?? "nil"), projects count: \(self.projectViewModel.projects.count)")
+                AppLogger.view.info("EventsDashboardView: onAppear - selectedProject: \(self.selectedProject?.name ?? "nil"), projects count: \(self.projectViewModel.projects.count)")
             }
     }
 

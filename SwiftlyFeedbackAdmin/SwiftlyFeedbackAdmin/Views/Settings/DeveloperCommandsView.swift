@@ -1,7 +1,4 @@
 import SwiftUI
-import OSLog
-
-private let logger = Logger(subsystem: "com.swiftlyfeedback.admin", category: "DeveloperCommands")
 
 // MARK: - Environment Detection
 
@@ -219,7 +216,7 @@ struct DeveloperCommandsView: View {
 
     private func generateProjects() async {
         isGenerating = true
-        logger.info("Generating \(projectCount) dummy projects...")
+        AppLogger.view.info("Generating \(projectCount) dummy projects...")
 
         var created: [String] = []
         var failed = 0
@@ -234,10 +231,10 @@ struct DeveloperCommandsView: View {
             let success = await projectViewModel.createProject()
             if success {
                 created.append(name)
-                logger.info("Created project: \(name)")
+                AppLogger.view.info("Created project: \(name)")
             } else {
                 failed += 1
-                logger.error("Failed to create project \(i)")
+                AppLogger.view.error("Failed to create project \(i)")
             }
         }
 
@@ -254,7 +251,7 @@ struct DeveloperCommandsView: View {
         guard let project = selectedProject else { return }
 
         isGenerating = true
-        logger.info("Generating \(feedbackCount) dummy feedback items for project: \(project.name)")
+        AppLogger.view.info("Generating \(feedbackCount) dummy feedback items for project: \(project.name)")
 
         // Load full project to get API key
         await projectViewModel.loadProject(id: project.id)
@@ -286,7 +283,7 @@ struct DeveloperCommandsView: View {
                 created += 1
             } catch {
                 failed += 1
-                logger.error("Failed to create feedback: \(error.localizedDescription)")
+                AppLogger.view.error("Failed to create feedback: \(error.localizedDescription)")
             }
         }
 
@@ -306,7 +303,7 @@ struct DeveloperCommandsView: View {
         guard let project = selectedProject else { return }
 
         isGenerating = true
-        logger.info("Generating comments for feedback in project: \(project.name)")
+        AppLogger.view.info("Generating comments for feedback in project: \(project.name)")
 
         // Load full project to get API key
         await projectViewModel.loadProject(id: project.id)
@@ -368,7 +365,7 @@ struct DeveloperCommandsView: View {
         guard let project = selectedProject else { return }
 
         isGenerating = true
-        logger.info("Clearing all feedback for project: \(project.name)")
+        AppLogger.view.info("Clearing all feedback for project: \(project.name)")
 
         // Load full project to get API key
         await projectViewModel.loadProject(id: project.id)
@@ -386,7 +383,7 @@ struct DeveloperCommandsView: View {
                     try await AdminAPIClient.shared.delete(path: "feedbacks/\(feedback.id)")
                     deleted += 1
                 } catch {
-                    logger.error("Failed to delete feedback \(feedback.id): \(error.localizedDescription)")
+                    AppLogger.view.error("Failed to delete feedback \(feedback.id): \(error.localizedDescription)")
                 }
             }
 
@@ -413,7 +410,7 @@ struct DeveloperCommandsView: View {
 
     private func clearAllProjects() async {
         isGenerating = true
-        logger.info("Deleting all projects...")
+        AppLogger.view.info("Deleting all projects...")
 
         var deleted = 0
         let projectsToDelete = projectViewModel.projects

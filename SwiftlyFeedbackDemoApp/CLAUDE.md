@@ -79,6 +79,9 @@ SwiftlyFeedback.config.expandDescriptionInList = false
 // Permission controls
 SwiftlyFeedback.config.allowFeedbackSubmission = true  // Disable for free users
 SwiftlyFeedback.config.feedbackSubmissionDisabledMessage = "Upgrade to Pro!"
+
+// Logging
+SwiftlyFeedback.config.loggingEnabled = false  // Reduce console clutter
 ```
 
 ## Settings Persistence

@@ -1,7 +1,4 @@
 import SwiftUI
-import OSLog
-
-private let logger = Logger(subsystem: "com.swiftlyfeedback.admin", category: "FeedbackViewModel")
 
 // MARK: - Sort Option
 
@@ -163,7 +160,7 @@ final class FeedbackViewModel {
 
     func loadFeedbacks(projectId: UUID, apiKey: String) async {
         guard !isLoadingFeedbacks else {
-            logger.debug("⏭️ loadFeedbacks skipped - already loading")
+            AppLogger.viewModel.debug("⏭️ loadFeedbacks skipped - already loading")
             return
         }
 
@@ -175,9 +172,9 @@ final class FeedbackViewModel {
 
         do {
             feedbacks = try await AdminAPIClient.shared.getFeedbacks(apiKey: apiKey)
-            logger.info("✅ Feedbacks loaded: \(self.feedbacks.count)")
+            AppLogger.viewModel.info("✅ Feedbacks loaded: \(self.feedbacks.count)")
         } catch {
-            logger.error("❌ Failed to load feedbacks: \(error.localizedDescription)")
+            AppLogger.viewModel.error("❌ Failed to load feedbacks: \(error.localizedDescription)")
             showError(message: error.localizedDescription)
         }
 
@@ -198,9 +195,9 @@ final class FeedbackViewModel {
 
         do {
             selectedFeedback = try await AdminAPIClient.shared.getFeedback(id: id, apiKey: apiKey)
-            logger.info("✅ Feedback loaded: \(id)")
+            AppLogger.viewModel.info("✅ Feedback loaded: \(id)")
         } catch {
-            logger.error("❌ Failed to load feedback: \(error.localizedDescription)")
+            AppLogger.viewModel.error("❌ Failed to load feedback: \(error.localizedDescription)")
             showError(message: error.localizedDescription)
         }
 
@@ -225,11 +222,11 @@ final class FeedbackViewModel {
                 selectedFeedback = updated
             }
 
-            logger.info("✅ Feedback status updated to \(status.rawValue)")
+            AppLogger.viewModel.info("✅ Feedback status updated to \(status.rawValue)")
             isLoading = false
             return true
         } catch {
-            logger.error("❌ Failed to update feedback status: \(error.localizedDescription)")
+            AppLogger.viewModel.error("❌ Failed to update feedback status: \(error.localizedDescription)")
             showError(message: error.localizedDescription)
             isLoading = false
             return false
@@ -254,11 +251,11 @@ final class FeedbackViewModel {
                 selectedFeedback = updated
             }
 
-            logger.info("✅ Feedback category updated to \(category.rawValue)")
+            AppLogger.viewModel.info("✅ Feedback category updated to \(category.rawValue)")
             isLoading = false
             return true
         } catch {
-            logger.error("❌ Failed to update feedback category: \(error.localizedDescription)")
+            AppLogger.viewModel.error("❌ Failed to update feedback category: \(error.localizedDescription)")
             showError(message: error.localizedDescription)
             isLoading = false
             return false
@@ -277,11 +274,11 @@ final class FeedbackViewModel {
             if selectedFeedback?.id == id {
                 selectedFeedback = nil
             }
-            logger.info("✅ Feedback deleted: \(id)")
+            AppLogger.viewModel.info("✅ Feedback deleted: \(id)")
             isLoading = false
             return true
         } catch {
-            logger.error("❌ Failed to delete feedback: \(error.localizedDescription)")
+            AppLogger.viewModel.error("❌ Failed to delete feedback: \(error.localizedDescription)")
             showError(message: error.localizedDescription)
             isLoading = false
             return false
@@ -293,13 +290,13 @@ final class FeedbackViewModel {
     func loadComments(feedbackId: UUID, apiKey: String) async {
         // Skip if already loading comments for this feedback
         guard !isLoadingComments || currentCommentsFeedbackId != feedbackId else {
-            logger.debug("⏭️ loadComments skipped - already loading for \(feedbackId)")
+            AppLogger.viewModel.debug("⏭️ loadComments skipped - already loading for \(feedbackId)")
             return
         }
 
         // Skip if we already have comments for this feedback (unless it's a different feedback)
         if currentCommentsFeedbackId == feedbackId && !comments.isEmpty {
-            logger.debug("⏭️ loadComments skipped - already loaded for \(feedbackId)")
+            AppLogger.viewModel.debug("⏭️ loadComments skipped - already loaded for \(feedbackId)")
             return
         }
 
@@ -308,9 +305,9 @@ final class FeedbackViewModel {
 
         do {
             comments = try await AdminAPIClient.shared.getComments(feedbackId: feedbackId, apiKey: apiKey)
-            logger.info("✅ Comments loaded: \(self.comments.count)")
+            AppLogger.viewModel.info("✅ Comments loaded: \(self.comments.count)")
         } catch {
-            logger.error("❌ Failed to load comments: \(error.localizedDescription)")
+            AppLogger.viewModel.error("❌ Failed to load comments: \(error.localizedDescription)")
             showError(message: error.localizedDescription)
         }
 
@@ -337,11 +334,11 @@ final class FeedbackViewModel {
             )
             comments.append(comment)
             newCommentContent = ""
-            logger.info("✅ Comment added")
+            AppLogger.viewModel.info("✅ Comment added")
             isLoading = false
             return true
         } catch {
-            logger.error("❌ Failed to add comment: \(error.localizedDescription)")
+            AppLogger.viewModel.error("❌ Failed to add comment: \(error.localizedDescription)")
             showError(message: error.localizedDescription)
             isLoading = false
             return false
@@ -355,11 +352,11 @@ final class FeedbackViewModel {
         do {
             try await AdminAPIClient.shared.deleteComment(feedbackId: feedbackId, commentId: commentId, apiKey: apiKey)
             comments.removeAll { $0.id == commentId }
-            logger.info("✅ Comment deleted: \(commentId)")
+            AppLogger.viewModel.info("✅ Comment deleted: \(commentId)")
             isLoading = false
             return true
         } catch {
-            logger.error("❌ Failed to delete comment: \(error.localizedDescription)")
+            AppLogger.viewModel.error("❌ Failed to delete comment: \(error.localizedDescription)")
             showError(message: error.localizedDescription)
             isLoading = false
             return false
@@ -416,12 +413,12 @@ final class FeedbackViewModel {
             clearSelection()
             feedbacksToMerge = []
 
-            logger.info("✅ Feedback merged: \(response.mergedCount) items merged, \(response.totalVotes) total votes")
+            AppLogger.viewModel.info("✅ Feedback merged: \(response.mergedCount) items merged, \(response.totalVotes) total votes")
             showSuccess(message: "Successfully merged \(response.mergedCount) feedback items")
             isLoading = false
             return true
         } catch {
-            logger.error("❌ Failed to merge feedback: \(error.localizedDescription)")
+            AppLogger.viewModel.error("❌ Failed to merge feedback: \(error.localizedDescription)")
             showError(message: error.localizedDescription)
             isLoading = false
             return false
@@ -447,12 +444,12 @@ final class FeedbackViewModel {
                 await refreshFeedbacks()
             }
 
-            logger.info("✅ GitHub issue created: \(response.issueUrl)")
+            AppLogger.viewModel.info("✅ GitHub issue created: \(response.issueUrl)")
             showSuccess(message: "GitHub issue #\(response.issueNumber) created")
             isLoading = false
             return true
         } catch {
-            logger.error("❌ Failed to create GitHub issue: \(error.localizedDescription)")
+            AppLogger.viewModel.error("❌ Failed to create GitHub issue: \(error.localizedDescription)")
             showError(message: error.localizedDescription)
             isLoading = false
             return false
@@ -486,17 +483,17 @@ final class FeedbackViewModel {
             clearSelection()
 
             if response.failed.isEmpty {
-                logger.info("✅ GitHub issues created: \(response.created.count)")
+                AppLogger.viewModel.info("✅ GitHub issues created: \(response.created.count)")
                 showSuccess(message: "Created \(response.created.count) GitHub issues")
             } else {
-                logger.warning("⚠️ GitHub issues created with some failures: \(response.created.count) created, \(response.failed.count) failed")
+                AppLogger.viewModel.warning("⚠️ GitHub issues created with some failures: \(response.created.count) created, \(response.failed.count) failed")
                 showSuccess(message: "Created \(response.created.count) GitHub issues (\(response.failed.count) failed)")
             }
 
             isLoading = false
             return true
         } catch {
-            logger.error("❌ Failed to create GitHub issues: \(error.localizedDescription)")
+            AppLogger.viewModel.error("❌ Failed to create GitHub issues: \(error.localizedDescription)")
             showError(message: error.localizedDescription)
             isLoading = false
             return false

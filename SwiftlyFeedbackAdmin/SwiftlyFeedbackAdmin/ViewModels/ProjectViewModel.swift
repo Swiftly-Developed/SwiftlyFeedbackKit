@@ -1,7 +1,4 @@
 import SwiftUI
-import OSLog
-
-private let logger = Logger(subsystem: "com.swiftlyfeedback.admin", category: "ProjectViewModel")
 
 @MainActor
 @Observable
@@ -32,7 +29,7 @@ final class ProjectViewModel {
     func loadProjects() async {
         // Prevent duplicate concurrent requests
         guard !isLoadingProjects else {
-            logger.debug("⏭️ loadProjects skipped - already loading")
+            AppLogger.viewModel.debug("⏭️ loadProjects skipped - already loading")
             return
         }
 
@@ -42,9 +39,9 @@ final class ProjectViewModel {
 
         do {
             projects = try await AdminAPIClient.shared.get(path: "projects")
-            logger.info("✅ Projects loaded: \(self.projects.count)")
+            AppLogger.viewModel.info("✅ Projects loaded: \(self.projects.count)")
         } catch {
-            logger.error("❌ Failed to load projects: \(error.localizedDescription)")
+            AppLogger.viewModel.error("❌ Failed to load projects: \(error.localizedDescription)")
             showError(message: error.localizedDescription)
         }
 
@@ -53,15 +50,15 @@ final class ProjectViewModel {
     }
 
     func loadProject(id: UUID) async {
-        logger.info("📂 Loading project details for: \(id.uuidString)")
+        AppLogger.viewModel.info("📂 Loading project details for: \(id.uuidString)")
         isLoadingDetail = true
         errorMessage = nil
 
         do {
             selectedProject = try await AdminAPIClient.shared.get(path: "projects/\(id)")
-            logger.info("✅ Project loaded: \(self.selectedProject?.name ?? "nil")")
+            AppLogger.viewModel.info("✅ Project loaded: \(self.selectedProject?.name ?? "nil")")
         } catch {
-            logger.error("❌ Failed to load project \(id.uuidString): \(error.localizedDescription)")
+            AppLogger.viewModel.error("❌ Failed to load project \(id.uuidString): \(error.localizedDescription)")
             showError(message: error.localizedDescription)
         }
 

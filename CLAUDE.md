@@ -113,6 +113,31 @@ SwiftlyFeedback.config.feedbackSubmissionDisabledMessage =
 - Alert message: Custom message or default "Feedback submission is not available. You can still vote for existing feedback."
 - Users can still browse and vote on existing feedback
 
+### SDK Logging
+
+The SDK outputs debug information to the console via OSLog. To prevent console clutter, logging can be disabled:
+
+```swift
+// Disable SDK logging
+SwiftlyFeedback.config.loggingEnabled = false
+```
+
+**Behavior:**
+- When `true` (default): SDK logs API requests, responses, and errors to the console
+- When `false`: All SDK logging is suppressed
+- Uses OSLog with subsystem `com.swiftlyfeedback.sdk`
+
+### Admin App Logging
+
+The Admin app also has configurable logging via `AppLogger`:
+
+```swift
+// Disable Admin app logging
+AppLogger.isEnabled = false
+```
+
+See [SwiftlyFeedbackAdmin/CLAUDE.md](SwiftlyFeedbackAdmin/CLAUDE.md) for full logging documentation with category details.
+
 ## Analytics & Tracking
 
 ### View Event Tracking

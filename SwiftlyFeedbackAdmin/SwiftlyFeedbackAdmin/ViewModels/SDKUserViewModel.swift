@@ -1,6 +1,5 @@
 import Foundation
 import SwiftUI
-import OSLog
 
 @MainActor
 @Observable
@@ -39,7 +38,7 @@ final class SDKUserViewModel {
             result = result.filter { user in
                 user.userId.localizedCaseInsensitiveContains(searchText)
             }
-            Logger.viewModel.debug("SDKUserViewModel: Filtered to \(result.count) users with search '\(self.searchText)'")
+            AppLogger.viewModel.debug("SDKUserViewModel: Filtered to \(result.count) users with search '\(self.searchText)'")
         }
 
         // Apply sort
@@ -58,19 +57,19 @@ final class SDKUserViewModel {
     }
 
     func loadUsers(projectId: UUID? = nil) async {
-        Logger.viewModel.info("SDKUserViewModel: loadUsers called for projectId: \(projectId?.uuidString ?? "all")")
+        AppLogger.viewModel.info("SDKUserViewModel: loadUsers called for projectId: \(projectId?.uuidString ?? "all")")
 
         guard !isLoading else {
-            Logger.viewModel.warning("SDKUserViewModel: loadUsers skipped - already loading")
+            AppLogger.viewModel.warning("SDKUserViewModel: loadUsers skipped - already loading")
             return
         }
 
         currentProjectId = projectId
         isLoading = true
-        Logger.viewModel.debug("SDKUserViewModel: Starting to load users and stats...")
+        AppLogger.viewModel.debug("SDKUserViewModel: Starting to load users and stats...")
 
         do {
-            Logger.viewModel.info("SDKUserViewModel: Fetching users and stats in parallel...")
+            AppLogger.viewModel.info("SDKUserViewModel: Fetching users and stats in parallel...")
 
             let loadedUsers: [SDKUser]
             let loadedStats: SDKUserStats
@@ -85,34 +84,34 @@ final class SDKUserViewModel {
                 (loadedUsers, loadedStats) = try await (usersResult, statsResult)
             }
 
-            Logger.viewModel.info("SDKUserViewModel: Successfully loaded \(loadedUsers.count) users")
-            Logger.viewModel.info("SDKUserViewModel: Stats - totalUsers: \(loadedStats.totalUsers), totalMrr: \(loadedStats.totalMrr), usersWithMrr: \(loadedStats.usersWithMrr)")
+            AppLogger.viewModel.info("SDKUserViewModel: Successfully loaded \(loadedUsers.count) users")
+            AppLogger.viewModel.info("SDKUserViewModel: Stats - totalUsers: \(loadedStats.totalUsers), totalMrr: \(loadedStats.totalMrr), usersWithMrr: \(loadedStats.usersWithMrr)")
 
             users = loadedUsers
             stats = loadedStats
 
             // Log first few users for debugging
             for (index, user) in loadedUsers.prefix(3).enumerated() {
-                Logger.viewModel.debug("SDKUserViewModel: User[\(index)] - id: \(user.id.uuidString), userId: \(user.userId), mrr: \(user.mrr ?? 0)")
+                AppLogger.viewModel.debug("SDKUserViewModel: User[\(index)] - id: \(user.id.uuidString), userId: \(user.userId), mrr: \(user.mrr ?? 0)")
             }
 
         } catch let error as APIError {
-            Logger.viewModel.error("SDKUserViewModel: APIError - \(error.localizedDescription)")
+            AppLogger.viewModel.error("SDKUserViewModel: APIError - \(error.localizedDescription)")
             errorMessage = error.localizedDescription
             showError = true
         } catch {
-            Logger.viewModel.error("SDKUserViewModel: Unknown error - \(error.localizedDescription)")
-            Logger.viewModel.error("SDKUserViewModel: Error type: \(type(of: error))")
+            AppLogger.viewModel.error("SDKUserViewModel: Unknown error - \(error.localizedDescription)")
+            AppLogger.viewModel.error("SDKUserViewModel: Error type: \(type(of: error))")
             errorMessage = error.localizedDescription
             showError = true
         }
 
         isLoading = false
-        Logger.viewModel.debug("SDKUserViewModel: loadUsers completed, isLoading = false")
+        AppLogger.viewModel.debug("SDKUserViewModel: loadUsers completed, isLoading = false")
     }
 
     func refreshUsers() async {
-        Logger.viewModel.info("SDKUserViewModel: refreshUsers called")
+        AppLogger.viewModel.info("SDKUserViewModel: refreshUsers called")
         await loadUsers(projectId: currentProjectId)
     }
 }
