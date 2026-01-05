@@ -6,6 +6,9 @@ import Charts
 struct EventsDashboardView: View {
     @Bindable var projectViewModel: ProjectViewModel
     @State private var eventViewModel = ViewEventViewModel()
+    @State private var showCustomPeriodSheet = false
+    @State private var customPeriodValue: Int = 14
+    @State private var customPeriodUnit: ViewEventViewModel.TimePeriodUnit = .days
 
     /// Uses the shared project filter from ProjectViewModel
     private var selectedProject: ProjectListItem? {
@@ -30,12 +33,16 @@ struct EventsDashboardView: View {
                 }
 
                 ToolbarItem(placement: .primaryAction) {
+                    timePeriodMenu
+                }
+
+                ToolbarItem(placement: .primaryAction) {
                     sortMenu
                 }
             }
             .searchable(text: $eventViewModel.searchText, prompt: "Search events...")
-            .task(id: selectedProject?.id) {
-                AppLogger.view.info("EventsDashboardView: .task fired for project: \(selectedProject?.name ?? "All Projects")")
+            .task(id: TaskIdentifier(projectId: selectedProject?.id, timePeriod: eventViewModel.timePeriod)) {
+                AppLogger.view.info("EventsDashboardView: .task fired for project: \(selectedProject?.name ?? "All Projects"), period: \(eventViewModel.timePeriod.displayName)")
                 // Load events for the current selected project (nil = all projects)
                 await eventViewModel.loadEvents(projectId: selectedProject?.id)
             }
@@ -50,9 +57,18 @@ struct EventsDashboardView: View {
             } message: {
                 Text(eventViewModel.errorMessage ?? "An error occurred")
             }
+            .sheet(isPresented: $showCustomPeriodSheet) {
+                customPeriodSheet
+            }
             .onAppear {
                 AppLogger.view.info("EventsDashboardView: onAppear - selectedProject: \(self.selectedProject?.name ?? "nil"), projects count: \(self.projectViewModel.projects.count)")
             }
+    }
+
+    /// Hashable identifier for .task(id:) that includes both project and time period
+    private struct TaskIdentifier: Hashable {
+        let projectId: UUID?
+        let timePeriod: ViewEventViewModel.TimePeriod
     }
 
     // MARK: - Project Picker
@@ -143,6 +159,251 @@ struct EventsDashboardView: View {
         }
     }
 
+    // MARK: - Time Period Menu
+
+    private var timePeriodMenu: some View {
+        Menu {
+            Section("Presets") {
+                ForEach(ViewEventViewModel.TimePeriod.presets, id: \.self) { period in
+                    Button {
+                        eventViewModel.timePeriod = period
+                    } label: {
+                        HStack {
+                            Text(period.displayName)
+                            if eventViewModel.timePeriod == period {
+                                Image(systemName: "checkmark")
+                            }
+                        }
+                    }
+                }
+            }
+
+            Divider()
+
+            Button {
+                showCustomPeriodSheet = true
+            } label: {
+                Label("Custom...", systemImage: "slider.horizontal.3")
+            }
+        } label: {
+            Label(eventViewModel.timePeriod.shortName, systemImage: "calendar")
+        }
+    }
+
+    // MARK: - Custom Period Sheet
+
+    private var customPeriodSheet: some View {
+        #if os(macOS)
+        macOSCustomPeriodSheet
+        #else
+        iOSCustomPeriodSheet
+        #endif
+    }
+
+    #if os(iOS)
+    private var iOSCustomPeriodSheet: some View {
+        NavigationStack {
+            Form {
+                // Quick presets for easy selection
+                Section {
+                    ForEach([7, 14, 30, 60, 90], id: \.self) { days in
+                        Button {
+                            customPeriodValue = days
+                            customPeriodUnit = .days
+                        } label: {
+                            HStack {
+                                Text("Last \(days) days")
+                                    .foregroundStyle(.primary)
+                                Spacer()
+                                if customPeriodUnit == .days && customPeriodValue == days {
+                                    Image(systemName: "checkmark")
+                                        .foregroundStyle(.blue)
+                                }
+                            }
+                        }
+                    }
+                } header: {
+                    Text("Quick Select")
+                }
+
+                // Custom input section
+                Section {
+                    Stepper(value: $customPeriodValue, in: 1...365) {
+                        HStack {
+                            Text("Last")
+                            Text("\(customPeriodValue)")
+                                .fontWeight(.semibold)
+                                .foregroundStyle(.blue)
+                                .frame(minWidth: 30)
+                        }
+                    }
+
+                    Picker("Unit", selection: $customPeriodUnit) {
+                        ForEach(ViewEventViewModel.TimePeriodUnit.allCases, id: \.self) { unit in
+                            Text(unit.rawValue).tag(unit)
+                        }
+                    }
+                    .pickerStyle(.menu)
+                } header: {
+                    Text("Custom Range")
+                } footer: {
+                    let totalDays = customPeriodUnit.toDays(customPeriodValue)
+                    if totalDays > 365 {
+                        Label("Maximum is 365 days. Will be clamped.", systemImage: "exclamationmark.triangle.fill")
+                            .foregroundStyle(.orange)
+                    } else {
+                        Text("Showing data for the last \(totalDays) days")
+                    }
+                }
+            }
+            .navigationTitle("Time Period")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") {
+                        showCustomPeriodSheet = false
+                    }
+                }
+
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Apply") {
+                        applyCustomPeriod()
+                    }
+                    .fontWeight(.semibold)
+                    .disabled(customPeriodValue < 1)
+                }
+            }
+        }
+        .presentationDetents([.medium])
+        .presentationDragIndicator(.visible)
+    }
+    #endif
+
+    #if os(macOS)
+    private var macOSCustomPeriodSheet: some View {
+        VStack(spacing: 0) {
+            // Header
+            HStack {
+                Text("Custom Time Period")
+                    .font(.headline)
+                Spacer()
+                Button {
+                    showCustomPeriodSheet = false
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .foregroundStyle(.secondary)
+                        .font(.title2)
+                }
+                .buttonStyle(.plain)
+            }
+            .padding()
+
+            Divider()
+
+            // Content
+            VStack(alignment: .leading, spacing: 20) {
+                // Quick presets
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Quick Select")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+
+                    HStack(spacing: 8) {
+                        ForEach([7, 14, 30, 60, 90], id: \.self) { days in
+                            Button {
+                                customPeriodValue = days
+                                customPeriodUnit = .days
+                            } label: {
+                                Text("\(days)d")
+                                    .frame(minWidth: 40)
+                            }
+                            .buttonStyle(.bordered)
+                            .tint(customPeriodUnit == .days && customPeriodValue == days ? .blue : .secondary)
+                        }
+                    }
+                }
+
+                Divider()
+
+                // Custom input
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("Custom Range")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+
+                    HStack(spacing: 12) {
+                        Text("Last")
+                            .foregroundStyle(.secondary)
+
+                        TextField("", value: $customPeriodValue, format: .number)
+                            .textFieldStyle(.roundedBorder)
+                            .frame(width: 60)
+                            .multilineTextAlignment(.center)
+
+                        Picker("", selection: $customPeriodUnit) {
+                            ForEach(ViewEventViewModel.TimePeriodUnit.allCases, id: \.self) { unit in
+                                Text(unit.rawValue).tag(unit)
+                            }
+                        }
+                        .frame(width: 100)
+
+                        Stepper("", value: $customPeriodValue, in: 1...365)
+                            .labelsHidden()
+                    }
+
+                    // Summary
+                    let totalDays = customPeriodUnit.toDays(customPeriodValue)
+                    HStack {
+                        if totalDays > 365 {
+                            Image(systemName: "exclamationmark.triangle.fill")
+                                .foregroundStyle(.orange)
+                            Text("Maximum is 365 days")
+                                .foregroundStyle(.orange)
+                        } else {
+                            Image(systemName: "calendar")
+                                .foregroundStyle(.secondary)
+                            Text("Total: \(totalDays) days")
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                    .font(.caption)
+                }
+            }
+            .padding()
+
+            Divider()
+
+            // Footer buttons
+            HStack {
+                Spacer()
+
+                Button("Cancel") {
+                    showCustomPeriodSheet = false
+                }
+                .keyboardShortcut(.cancelAction)
+
+                Button("Apply") {
+                    applyCustomPeriod()
+                }
+                .keyboardShortcut(.defaultAction)
+                .buttonStyle(.borderedProminent)
+                .disabled(customPeriodValue < 1)
+            }
+            .padding()
+        }
+        .frame(width: 380, height: 340)
+    }
+    #endif
+
+    private func applyCustomPeriod() {
+        if customPeriodUnit.toDays(customPeriodValue) > 365 {
+            eventViewModel.timePeriod = .year
+        } else {
+            eventViewModel.timePeriod = .custom(value: customPeriodValue, unit: customPeriodUnit)
+        }
+        showCustomPeriodSheet = false
+    }
+
     // MARK: - Dashboard Content
 
     @ViewBuilder
@@ -170,7 +431,7 @@ struct EventsDashboardView: View {
 
                 // Daily Chart Section
                 if let overview = eventViewModel.overview, !overview.dailyStats.isEmpty {
-                    DailyEventsChartView(dailyStats: overview.dailyStats)
+                    DailyEventsChartView(dailyStats: overview.dailyStats, periodLabel: eventViewModel.timePeriod.displayName)
                 }
 
                 // Event Breakdown Section
@@ -489,6 +750,7 @@ struct RecentEventRowView: View {
 
 struct DailyEventsChartView: View {
     let dailyStats: [DailyEventStats]
+    var periodLabel: String = "Last 30 Days"
     @State private var selectedDay: DailyEventStats?
 
     var body: some View {
@@ -500,7 +762,7 @@ struct DailyEventsChartView: View {
 
                 Spacer()
 
-                Text("Last 30 days")
+                Text(periodLabel)
                     .font(.caption)
                     .foregroundStyle(.tertiary)
             }

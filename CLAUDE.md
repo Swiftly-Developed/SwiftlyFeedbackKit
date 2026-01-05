@@ -161,12 +161,21 @@ SwiftlyFeedback.config.enableAutomaticViewTracking = false
 
 **Server Endpoints:**
 - `POST /events/track` - Track event (SDK, API key auth)
-- `GET /events/project/:id/stats` - Event statistics with 30-day daily breakdown (Admin, bearer auth)
+- `GET /events/project/:id/stats?days=N` - Event statistics with daily breakdown (Admin, bearer auth)
+- `GET /events/all/stats?days=N` - Aggregated event statistics across all projects (Admin, bearer auth)
 - `GET /events/project/:id` - Recent events (Admin, bearer auth)
+
+**Time Period Filter:**
+The Events dashboard supports flexible time period filtering:
+- **Presets**: Last 7 Days, Last 30 Days (default), Last 90 Days, Last Year
+- **Custom**: Any value + unit (Days, Weeks, Months, Years)
+- Query parameter: `?days=N` (max 365)
+- Platform-specific UI: iOS uses sheet with list/stepper, macOS uses popover with buttons/text field
 
 **Admin Dashboard:**
 - Events tab displays total events, unique users, and event breakdown by type
-- Daily events chart (Swift Charts) shows 30-day history with bar visualization
+- Daily events chart (Swift Charts) shows event history for selected time period
+- Time period picker in toolbar with presets and custom period option
 - Recent events list with user type indicators (iCloud/Device/Custom)
 
 ### SDK User Tracking
@@ -210,6 +219,13 @@ The Admin app includes a Home dashboard with key performance indicators (KPIs) a
 - Status breakdown section shows feedback counts by status
 - Projects section lists all projects with feedback/user/comment/vote counts
 - Project picker in toolbar filters all stats by selected project
+
+### Shared Project Filter
+The Admin app maintains a shared project filter across multiple tabs:
+- **Feedback**, **Users**, and **Events** tabs share the same project selection
+- Selecting "All Projects" or a specific project persists when switching tabs
+- Implemented via `selectedFilterProject` property on `ProjectViewModel`
+- Uses `.task(id:)` modifier for reactive data loading when filter changes
 
 ## Project Icons
 

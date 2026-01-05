@@ -139,8 +139,11 @@ All routes prefixed with `/api/v1`.
 ### View Events
 - `POST /events/track` - Track view event (X-API-Key required)
 - `GET /events/project/:projectId` - List recent events (Bearer token required)
-- `GET /events/project/:projectId/stats` - Get event statistics with 30-day daily breakdown (Bearer token required)
-- `GET /events/all/stats` - Get aggregated event statistics across all projects (Bearer token required)
+- `GET /events/project/:projectId/stats?days=N` - Get event statistics with daily breakdown (Bearer token required)
+- `GET /events/all/stats?days=N` - Get aggregated event statistics across all projects (Bearer token required)
+
+**Query Parameters:**
+- `days` (optional): Number of days to include in statistics (default: 30, max: 365)
 
 ### Dashboard (Bearer token required)
 - `GET /dashboard/home` - Aggregated KPIs across all user's projects (projects, feedback by status/category, users, comments, votes)

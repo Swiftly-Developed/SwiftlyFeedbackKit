@@ -30,7 +30,14 @@ actor AdminAPIClient {
         body: (any Encodable)? = nil,
         requiresAuth: Bool = true
     ) async throws -> (Data, URLResponse) {
-        let url = baseURL.appendingPathComponent(path)
+        // Handle paths with query parameters - don't use appendingPathComponent for those
+        let url: URL
+        if path.contains("?") {
+            // Path contains query string - append directly to avoid encoding ? as %3F
+            url = URL(string: baseURL.absoluteString + "/" + path)!
+        } else {
+            url = baseURL.appendingPathComponent(path)
+        }
         var request = URLRequest(url: url)
         request.httpMethod = method
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
@@ -490,9 +497,9 @@ actor AdminAPIClient {
 
     // MARK: - View Events API
 
-    func getAllViewEventStats() async throws -> ViewEventsOverview {
-        let path = "events/all/stats"
-        AppLogger.api.info("🔵 GET \(path) (all view event stats)")
+    func getAllViewEventStats(days: Int = 30) async throws -> ViewEventsOverview {
+        let path = "events/all/stats?days=\(days)"
+        AppLogger.api.info("🔵 GET \(path) (all view event stats, \(days) days)")
         let (data, response) = try await makeRequest(path: path, method: "GET", requiresAuth: true)
         try validateResponse(response, data: data, path: path)
 
@@ -510,9 +517,9 @@ actor AdminAPIClient {
         }
     }
 
-    func getViewEventStats(projectId: UUID) async throws -> ViewEventsOverview {
-        let path = "events/project/\(projectId)/stats"
-        AppLogger.api.info("🔵 GET \(path) (view event stats)")
+    func getViewEventStats(projectId: UUID, days: Int = 30) async throws -> ViewEventsOverview {
+        let path = "events/project/\(projectId)/stats?days=\(days)"
+        AppLogger.api.info("🔵 GET \(path) (view event stats, \(days) days)")
         let (data, response) = try await makeRequest(path: path, method: "GET", requiresAuth: true)
         try validateResponse(response, data: data, path: path)
 

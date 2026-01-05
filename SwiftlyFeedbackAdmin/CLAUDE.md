@@ -243,9 +243,34 @@ The `EventsDashboardView` provides a dedicated tab for viewing SDK view events (
 - Shared project picker in toolbar (persists across tabs)
 - **All Projects** option to view events across all projects (default)
 - Stats cards showing: Total Events, Unique Users
-- **Daily Events Chart** (Swift Charts) showing 30-day event history with bar visualization
+- **Daily Events Chart** (Swift Charts) showing event history for selected time period
+- **Time Period Filter**: Presets (7d, 30d, 90d, 1y) and custom periods
 - Event breakdown showing count and unique users per event type
 - Recent events list with user type indicators (iCloud/Device/Custom)
+
+### Time Period Filter
+The Events tab includes a flexible time period filter in the toolbar:
+
+**Presets:**
+- Last 7 Days (week)
+- Last 30 Days (month, default)
+- Last 90 Days (quarter)
+- Last Year (365 days)
+
+**Custom Period:**
+- Select "Custom..." from the menu to open a sheet/popover
+- Enter a numeric value and select a unit (Days, Weeks, Months, Years)
+- Maximum: 365 days total
+
+**Platform-Specific UI (Apple HIG compliant):**
+- **iOS/iPadOS**: Half-sheet with quick select list, stepper for value, menu picker for unit
+- **macOS**: Fixed-size popover with horizontal button presets, text field for value, dropdown for unit, keyboard shortcut (Enter to apply)
+
+**Implementation:**
+- `TimePeriod` enum with `.week`, `.month`, `.quarter`, `.year`, and `.custom(value:unit:)` cases
+- `TimePeriodUnit` enum for Days, Weeks, Months, Years with `toDays()` conversion
+- Uses `.task(id:)` modifier to reload data when time period changes
+- Server endpoint: `GET /events/all/stats?days=N` or `GET /events/project/:id/stats?days=N`
 
 ### Event Types
 Events can be any custom string, plus predefined types:

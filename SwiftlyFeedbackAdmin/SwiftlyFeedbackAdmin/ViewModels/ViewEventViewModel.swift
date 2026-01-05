@@ -10,6 +10,7 @@ final class ViewEventViewModel {
     var errorMessage: String?
     var searchText = ""
     var sortOrder: SortOrder = .totalCount
+    var timePeriod: TimePeriod = .month
 
     enum SortOrder: String, CaseIterable {
         case totalCount = "Total Count"
@@ -22,6 +23,80 @@ final class ViewEventViewModel {
             case .uniqueUsers: return "person.2"
             case .eventName: return "textformat"
             }
+        }
+    }
+
+    enum TimePeriodUnit: String, CaseIterable {
+        case days = "Days"
+        case weeks = "Weeks"
+        case months = "Months"
+        case years = "Years"
+
+        var icon: String {
+            switch self {
+            case .days: return "calendar.day.timeline.left"
+            case .weeks: return "calendar"
+            case .months: return "calendar.badge.clock"
+            case .years: return "calendar.circle"
+            }
+        }
+
+        func toDays(_ value: Int) -> Int {
+            switch self {
+            case .days: return value
+            case .weeks: return value * 7
+            case .months: return value * 30
+            case .years: return value * 365
+            }
+        }
+    }
+
+    enum TimePeriod: Equatable, Hashable {
+        case week       // 7 days
+        case month      // 30 days
+        case quarter    // 90 days
+        case year       // 365 days
+        case custom(value: Int, unit: TimePeriodUnit)
+
+        var days: Int {
+            switch self {
+            case .week: return 7
+            case .month: return 30
+            case .quarter: return 90
+            case .year: return 365
+            case .custom(let value, let unit): return unit.toDays(value)
+            }
+        }
+
+        var displayName: String {
+            switch self {
+            case .week: return "Last 7 Days"
+            case .month: return "Last 30 Days"
+            case .quarter: return "Last 90 Days"
+            case .year: return "Last Year"
+            case .custom(let value, let unit):
+                return "Last \(value) \(unit.rawValue)"
+            }
+        }
+
+        var shortName: String {
+            switch self {
+            case .week: return "7d"
+            case .month: return "30d"
+            case .quarter: return "90d"
+            case .year: return "1y"
+            case .custom(let value, let unit):
+                switch unit {
+                case .days: return "\(value)d"
+                case .weeks: return "\(value)w"
+                case .months: return "\(value)m"
+                case .years: return "\(value)y"
+                }
+            }
+        }
+
+        static var presets: [TimePeriod] {
+            [.week, .month, .quarter, .year]
         }
     }
 
@@ -53,7 +128,7 @@ final class ViewEventViewModel {
     }
 
     func loadEvents(projectId: UUID? = nil) async {
-        AppLogger.viewModel.info("ViewEventViewModel: loadEvents called for projectId: \(projectId?.uuidString ?? "all")")
+        AppLogger.viewModel.info("ViewEventViewModel: loadEvents called for projectId: \(projectId?.uuidString ?? "all"), days: \(timePeriod.days)")
 
         guard !isLoading else {
             AppLogger.viewModel.warning("ViewEventViewModel: loadEvents skipped - already loading")
@@ -65,13 +140,13 @@ final class ViewEventViewModel {
         AppLogger.viewModel.debug("ViewEventViewModel: Starting to load events...")
 
         do {
-            AppLogger.viewModel.info("ViewEventViewModel: Fetching event stats...")
+            AppLogger.viewModel.info("ViewEventViewModel: Fetching event stats for \(timePeriod.days) days...")
 
             let loadedOverview: ViewEventsOverview
             if let projectId = projectId {
-                loadedOverview = try await AdminAPIClient.shared.getViewEventStats(projectId: projectId)
+                loadedOverview = try await AdminAPIClient.shared.getViewEventStats(projectId: projectId, days: timePeriod.days)
             } else {
-                loadedOverview = try await AdminAPIClient.shared.getAllViewEventStats()
+                loadedOverview = try await AdminAPIClient.shared.getAllViewEventStats(days: timePeriod.days)
             }
 
             AppLogger.viewModel.info("ViewEventViewModel: Successfully loaded overview - totalEvents: \(loadedOverview.totalEvents), uniqueUsers: \(loadedOverview.uniqueUsers)")

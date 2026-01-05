@@ -161,11 +161,22 @@ struct SDKUserController: RouteCollection {
         let user = try req.auth.require(User.self)
         let userId = try user.requireID()
 
-        // Get all projects the user has access to
-        let memberships = try await ProjectMember.query(on: req.db)
+        // Get all projects the user has access to (owned + member)
+        let ownedProjects = try await Project.query(on: req.db)
+            .filter(\.$owner.$id == userId)
+            .all()
+
+        let memberProjectIds = try await ProjectMember.query(on: req.db)
             .filter(\.$user.$id == userId)
             .all()
-        let projectIds = memberships.map { $0.$project.id }
+            .map { $0.$project.id }
+
+        let memberProjects = try await Project.query(on: req.db)
+            .filter(\.$id ~~ memberProjectIds)
+            .all()
+
+        let allProjects = ownedProjects + memberProjects
+        let projectIds = allProjects.compactMap { $0.id }
 
         // Get all SDK users for these projects
         let sdkUsers = try await SDKUser.query(on: req.db)
@@ -209,11 +220,22 @@ struct SDKUserController: RouteCollection {
         let user = try req.auth.require(User.self)
         let userId = try user.requireID()
 
-        // Get all projects the user has access to
-        let memberships = try await ProjectMember.query(on: req.db)
+        // Get all projects the user has access to (owned + member)
+        let ownedProjects = try await Project.query(on: req.db)
+            .filter(\.$owner.$id == userId)
+            .all()
+
+        let memberProjectIds = try await ProjectMember.query(on: req.db)
             .filter(\.$user.$id == userId)
             .all()
-        let projectIds = memberships.map { $0.$project.id }
+            .map { $0.$project.id }
+
+        let memberProjects = try await Project.query(on: req.db)
+            .filter(\.$id ~~ memberProjectIds)
+            .all()
+
+        let allProjects = ownedProjects + memberProjects
+        let projectIds = allProjects.compactMap { $0.id }
 
         let sdkUsers = try await SDKUser.query(on: req.db)
             .filter(\.$project.$id ~~ projectIds)

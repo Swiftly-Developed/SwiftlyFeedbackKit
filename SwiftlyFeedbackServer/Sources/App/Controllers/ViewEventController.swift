@@ -88,6 +88,7 @@ struct ViewEventController: RouteCollection {
     }
 
     /// Get view event statistics for a project (admin only)
+    /// Query params: days (optional, default 30, max 365)
     @Sendable
     func getProjectEventStats(req: Request) async throws -> ViewEventsOverviewDTO {
         let user = try req.auth.require(User.self)
@@ -106,9 +107,20 @@ struct ViewEventController: RouteCollection {
             throw Abort(.forbidden, reason: "You don't have access to this project")
         }
 
-        // Get all events for this project
+        // Get days parameter (default 30, max 365)
+        let days = min(req.query[Int.self, at: "days"] ?? 30, 365)
+
+        // Calculate the start date for filtering
+        let calendar = Calendar.current
+        let today = calendar.startOfDay(for: Date())
+        guard let startDate = calendar.date(byAdding: .day, value: -(days - 1), to: today) else {
+            throw Abort(.internalServerError, reason: "Failed to calculate date range")
+        }
+
+        // Get events for this project within the date range
         let allEvents = try await ViewEvent.query(on: req.db)
             .filter(\.$project.$id == projectId)
+            .filter(\.$createdAt >= startDate)
             .all()
 
         // Calculate totals
@@ -128,13 +140,14 @@ struct ViewEventController: RouteCollection {
         // Get recent events (last 10)
         let recentEvents = try await ViewEvent.query(on: req.db)
             .filter(\.$project.$id == projectId)
+            .filter(\.$createdAt >= startDate)
             .sort(\.$createdAt, .descending)
             .limit(10)
             .all()
             .map { ViewEventResponseDTO(viewEvent: $0) }
 
-        // Calculate daily stats (last 30 days)
-        let dailyStats = calculateDailyStats(events: allEvents, days: 30)
+        // Calculate daily stats for the requested period
+        let dailyStats = calculateDailyStats(events: allEvents, days: days)
 
         return ViewEventsOverviewDTO(
             totalEvents: totalEvents,
@@ -146,20 +159,43 @@ struct ViewEventController: RouteCollection {
     }
 
     /// Get view event statistics across all projects the user has access to (admin only)
+    /// Query params: days (optional, default 30, max 365)
     @Sendable
     func getAllEventStats(req: Request) async throws -> ViewEventsOverviewDTO {
         let user = try req.auth.require(User.self)
         let userId = try user.requireID()
 
-        // Get all projects the user has access to
-        let memberships = try await ProjectMember.query(on: req.db)
+        // Get days parameter (default 30, max 365)
+        let days = min(req.query[Int.self, at: "days"] ?? 30, 365)
+
+        // Calculate the start date for filtering
+        let calendar = Calendar.current
+        let today = calendar.startOfDay(for: Date())
+        guard let startDate = calendar.date(byAdding: .day, value: -(days - 1), to: today) else {
+            throw Abort(.internalServerError, reason: "Failed to calculate date range")
+        }
+
+        // Get all projects the user has access to (owned + member)
+        let ownedProjects = try await Project.query(on: req.db)
+            .filter(\.$owner.$id == userId)
+            .all()
+
+        let memberProjectIds = try await ProjectMember.query(on: req.db)
             .filter(\.$user.$id == userId)
             .all()
-        let projectIds = memberships.map { $0.$project.id }
+            .map { $0.$project.id }
 
-        // Get all events for these projects
+        let memberProjects = try await Project.query(on: req.db)
+            .filter(\.$id ~~ memberProjectIds)
+            .all()
+
+        let allProjects = ownedProjects + memberProjects
+        let projectIds = allProjects.compactMap { $0.id }
+
+        // Get events for these projects within the date range
         let allEvents = try await ViewEvent.query(on: req.db)
             .filter(\.$project.$id ~~ projectIds)
+            .filter(\.$createdAt >= startDate)
             .all()
 
         // Calculate totals
@@ -176,16 +212,17 @@ struct ViewEventController: RouteCollection {
             )
         }.sorted { $0.totalCount > $1.totalCount }
 
-        // Get recent events (last 10) across all projects
+        // Get recent events (last 10) across all projects within the date range
         let recentEvents = try await ViewEvent.query(on: req.db)
             .filter(\.$project.$id ~~ projectIds)
+            .filter(\.$createdAt >= startDate)
             .sort(\.$createdAt, .descending)
             .limit(10)
             .all()
             .map { ViewEventResponseDTO(viewEvent: $0) }
 
-        // Calculate daily stats (last 30 days)
-        let dailyStats = calculateDailyStats(events: allEvents, days: 30)
+        // Calculate daily stats for the requested period
+        let dailyStats = calculateDailyStats(events: allEvents, days: days)
 
         return ViewEventsOverviewDTO(
             totalEvents: totalEvents,
