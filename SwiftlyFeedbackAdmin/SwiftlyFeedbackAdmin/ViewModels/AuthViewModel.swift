@@ -43,6 +43,11 @@ final class AuthViewModel {
                     currentUser = try await AuthService.shared.getCurrentUser()
                     isAuthenticated = true
                     AppLogger.viewModel.info("✅ Auth state restored - user: \(self.currentUser?.id.uuidString ?? "nil"), isEmailVerified: \(self.currentUser?.isEmailVerified ?? false)")
+
+                    // Sync RevenueCat with user ID
+                    if let userId = currentUser?.id {
+                        await SubscriptionService.shared.login(userId: userId)
+                    }
                 } catch {
                     AppLogger.viewModel.error("❌ Failed to restore auth state: \(error.localizedDescription)")
                     // Token invalid or expired
@@ -76,6 +81,9 @@ final class AuthViewModel {
             isAuthenticated = true
             AppLogger.viewModel.info("✅ Login successful - isEmailVerified: \(response.user.isEmailVerified)")
             clearLoginFields()
+
+            // Sync RevenueCat with user ID
+            await SubscriptionService.shared.login(userId: response.user.id)
         } catch {
             AppLogger.viewModel.error("❌ Login failed: \(error.localizedDescription)")
             showError(message: error.localizedDescription)
@@ -117,6 +125,9 @@ final class AuthViewModel {
             isAuthenticated = true
             AppLogger.viewModel.info("✅ Signup successful - isEmailVerified: \(response.user.isEmailVerified)")
             clearSignupFields()
+
+            // Sync RevenueCat with user ID
+            await SubscriptionService.shared.login(userId: response.user.id)
         } catch {
             AppLogger.viewModel.error("❌ Signup failed: \(error.localizedDescription)")
             showError(message: error.localizedDescription)
@@ -136,6 +147,9 @@ final class AuthViewModel {
             AppLogger.viewModel.warning("⚠️ Logout error (ignoring): \(error.localizedDescription)")
             // Ignore logout errors
         }
+
+        // Logout from RevenueCat
+        await SubscriptionService.shared.logout()
 
         currentUser = nil
         isAuthenticated = false

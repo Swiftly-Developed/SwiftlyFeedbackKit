@@ -328,3 +328,100 @@ When selecting multiple feedback items, the action bar includes "Push to GitHub"
 - `FeedbackListView.swift` - Row context menu with GitHub actions
 - `FeedbackViewModel.swift` - `createGitHubIssue()` and `bulkCreateGitHubIssues()` methods
 - `AdminAPIClient.swift` - `createGitHubIssue()` and `bulkCreateGitHubIssues()` API calls
+
+## RevenueCat Subscription Integration
+
+The Admin app integrates RevenueCat for subscription management.
+
+### SubscriptionService
+
+`SubscriptionService.swift` manages RevenueCat SDK integration:
+
+```swift
+// Access singleton
+let service = SubscriptionService.shared
+
+// Configure at app launch (done in SwiftlyFeedbackAdminApp.swift)
+SubscriptionService.shared.configure()
+
+// Login/logout (called from AuthViewModel)
+await SubscriptionService.shared.login(userId: user.id)
+await SubscriptionService.shared.logout()
+
+// Check subscription status
+service.currentTier        // .free, .pro, or .team
+service.isProSubscriber    // Pro or Team active
+service.isTeamSubscriber   // Team active
+service.isPaidSubscriber   // Any paid subscription active
+
+// Purchase and restore
+try await service.purchase(package: package)
+try await service.restorePurchases()
+```
+
+### Subscription Tiers
+
+| Tier | Projects | Feedback | Team Members | Integrations |
+|------|----------|----------|--------------|--------------|
+| Free | 1 | 10/project | No | No |
+| Pro | 2 | Unlimited | No | No |
+| Team | Unlimited | Unlimited | Unlimited | All (Slack, GitHub, Email) |
+
+### SubscriptionTier Enum
+
+```swift
+enum SubscriptionTier: String, Codable, Sendable {
+    case free, pro, team
+
+    var maxProjects: Int?           // nil = unlimited
+    var maxFeedbackPerProject: Int? // nil = unlimited
+    var canInviteMembers: Bool
+    var hasIntegrations: Bool
+    var hasAdvancedAnalytics: Bool
+    var hasConfigurableStatuses: Bool
+
+    func meetsRequirement(_ required: SubscriptionTier) -> Bool
+}
+```
+
+### Entitlement IDs
+
+- `"Swiftly Pro"` - Pro tier entitlement
+- `"Swiftly Team"` - Team tier entitlement
+
+### Product IDs
+
+- `monthly` - Pro monthly subscription
+- `yearly` - Pro yearly subscription
+- `monthlyTeam` - Team monthly subscription
+- `yearlyTeam` - Team yearly subscription
+
+### UI Components
+
+- `SubscriptionView.swift` - Full subscription management screen
+  - Current plan display with tier icon and renewal date
+  - Pro/Team feature lists with checkmarks
+  - Upgrade button with RevenueCatUI PaywallView
+  - Manage subscription via CustomerCenterView
+  - Restore purchases button
+
+- `SettingsView.swift` - Subscription row in settings
+  - Shows current tier with icon
+  - Shows renewal/expiration date for paid users
+  - Links to SubscriptionView
+
+### Logging
+
+Uses `AppLogger.subscription` category:
+
+```swift
+AppLogger.subscription.info("RevenueCat configured")
+AppLogger.subscription.error("Purchase failed: \(error)")
+```
+
+### Files
+
+- `Services/SubscriptionService.swift` - RevenueCat SDK wrapper
+- `Views/Settings/SubscriptionView.swift` - Subscription management UI
+- `Views/Settings/SettingsView.swift` - Settings with subscription section
+- `Services/Logger.swift` - Added subscription logging category

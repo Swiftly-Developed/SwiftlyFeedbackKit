@@ -472,6 +472,55 @@ TextField("Name", text: Bindable(settings).userName)
 Toggle("Feature", isOn: Bindable(settings).featureEnabled)
 ```
 
+## Monetization (RevenueCat)
+
+SwiftlyFeedback uses RevenueCat for subscription management. The implementation is partially complete - see `TODO_MONETIZATION.md` for remaining tasks.
+
+### Subscription Tiers
+
+| Tier | Monthly | Yearly | Projects | Feedback | Team Members | Integrations |
+|------|---------|--------|----------|----------|--------------|--------------|
+| Free | $0 | $0 | 1 | 10/project | None | None |
+| Pro | $15 | $150 | 2 | Unlimited | None | None |
+| Team | $39 | $390 | Unlimited | Unlimited | Unlimited | All |
+
+### Feature Matrix
+
+| Feature | Free | Pro | Team |
+|---------|------|-----|------|
+| Create projects | 1 | 2 | Unlimited |
+| Feedback items per project | 10 | Unlimited | Unlimited |
+| Invite team members | No | No | Yes |
+| Slack/GitHub/Email integrations | No | No | Yes |
+| Configurable statuses | No | Yes | Yes |
+| MRR tracking/sorting | No | Yes | Yes |
+
+### Current Implementation Status
+
+**Completed (Admin App):**
+- RevenueCat SDK integration (`SubscriptionService.swift`)
+- Subscription UI (`SubscriptionView.swift`)
+- Settings integration with subscription row
+- Auth flow integration (login/logout sync with RevenueCat)
+- Logging category for subscription events
+
+**Not Yet Implemented:**
+- Server-side: Database schema, webhook handlers, feature limit enforcement
+- Admin App: Feature gating UI (PaywallView, FeatureGatedView wrappers)
+- SDK: 402 Payment Required error handling
+
+See `SwiftlyFeedbackAdmin/CLAUDE.md` for detailed Admin app implementation docs.
+
+### RevenueCat Configuration
+
+**Entitlements:**
+- `"Swiftly Pro"` - Pro tier access
+- `"Swiftly Team"` - Team tier access
+
+**Products:**
+- `monthly` / `yearly` - Pro subscriptions
+- `monthlyTeam` / `yearlyTeam` - Team subscriptions
+
 ## Code Conventions
 
 - Use `@main` attribute for app entry points

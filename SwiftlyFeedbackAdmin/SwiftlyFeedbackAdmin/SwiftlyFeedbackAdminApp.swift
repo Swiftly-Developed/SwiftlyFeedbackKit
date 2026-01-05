@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import RevenueCat
 
 #if os(macOS)
 import AppKit
@@ -43,6 +44,11 @@ struct SwiftlyFeedbackAdminApp: App {
     #if os(macOS)
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
     #endif
+
+    init() {
+        // Configure RevenueCat SDK at app launch
+        SubscriptionService.shared.configure()
+    }
 
     var body: some Scene {
         WindowGroup {

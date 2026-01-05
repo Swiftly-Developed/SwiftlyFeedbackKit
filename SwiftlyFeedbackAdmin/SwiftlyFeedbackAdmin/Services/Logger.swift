@@ -43,6 +43,9 @@ enum AppLogger {
 
     /// Keychain logging - secure storage operations
     static let keychain = LoggerWrapper(category: "Keychain", subsystem: subsystem)
+
+    /// Subscription logging - RevenueCat, purchases, entitlements
+    static let subscription = LoggerWrapper(category: "Subscription", subsystem: subsystem)
 }
 
 /// A wrapper around OSLog Logger that respects the global `isLoggingEnabled` flag.

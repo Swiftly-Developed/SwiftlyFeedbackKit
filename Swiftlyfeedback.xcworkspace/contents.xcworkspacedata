@@ -19,4 +19,7 @@
    <FileRef
       location = "group:AGENTS.md">
    </FileRef>
+   <FileRef
+      location = "group:PLAN_MONETIZATION.md">
+   </FileRef>
 </Workspace>

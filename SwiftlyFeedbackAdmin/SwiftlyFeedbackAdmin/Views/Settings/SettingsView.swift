@@ -1,14 +1,17 @@
 import SwiftUI
+import RevenueCatUI
 
 struct SettingsView: View {
     @Bindable var authViewModel: AuthViewModel
     var projectViewModel: ProjectViewModel?
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
 
+    @State private var subscriptionService = SubscriptionService.shared
     @State private var showingLogoutConfirmation = false
     @State private var showingChangePassword = false
     @State private var showingDeleteAccount = false
     @State private var showingDeveloperCommands = false
+    @State private var showingSubscription = false
     @State private var pendingLogout = false
 
     var body: some View {
@@ -79,6 +82,9 @@ struct SettingsView: View {
             // Profile Section
             profileSection
 
+            // Subscription Section
+            subscriptionSection
+
             // Notifications Section
             notificationsSection
 
@@ -138,6 +144,86 @@ struct SettingsView: View {
                 }
                 .padding(.vertical, 8)
             }
+        }
+    }
+
+    // MARK: - Subscription Section
+
+    @ViewBuilder
+    private var subscriptionSection: some View {
+        Section {
+            NavigationLink {
+                SubscriptionView()
+            } label: {
+                HStack(spacing: 12) {
+                    ZStack {
+                        subscriptionGradient
+                    }
+                    .frame(width: 28, height: 28)
+                    .clipShape(RoundedRectangle(cornerRadius: 6))
+                    .overlay {
+                        Image(systemName: subscriptionIcon)
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundStyle(subscriptionService.isPaidSubscriber ? .white : .gray)
+                    }
+
+                    Text("Subscription")
+                        .foregroundStyle(.primary)
+
+                    Spacer()
+
+                    Text(subscriptionService.subscriptionStatusText)
+                        .foregroundStyle(.secondary)
+
+                    if subscriptionService.isPaidSubscriber {
+                        Image(systemName: "checkmark.seal.fill")
+                            .foregroundStyle(.green)
+                            .font(.subheadline)
+                    }
+                }
+            }
+        } header: {
+            Text("Subscription")
+        } footer: {
+            if subscriptionService.isPaidSubscriber {
+                if let expirationDate = subscriptionService.subscriptionExpirationDate {
+                    if subscriptionService.willRenew {
+                        Text("Your subscription renews on \(expirationDate.formatted(date: .abbreviated, time: .omitted)).")
+                    } else {
+                        Text("Your subscription expires on \(expirationDate.formatted(date: .abbreviated, time: .omitted)).")
+                    }
+                }
+            } else {
+                Text("Upgrade to Pro or Team for unlimited feedback, integrations, and more.")
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var subscriptionGradient: some View {
+        switch subscriptionService.currentTier {
+        case .free:
+            Color.gray.opacity(0.3)
+        case .pro:
+            LinearGradient(
+                colors: [.purple, .pink],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+        case .team:
+            LinearGradient(
+                colors: [.blue, .cyan],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+        }
+    }
+
+    private var subscriptionIcon: String {
+        switch subscriptionService.currentTier {
+        case .free: return "crown"
+        case .pro: return "crown.fill"
+        case .team: return "person.3.fill"
         }
     }
 
