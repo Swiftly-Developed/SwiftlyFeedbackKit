@@ -138,6 +138,55 @@ AppLogger.isEnabled = false
 
 See [SwiftlyFeedbackAdmin/CLAUDE.md](SwiftlyFeedbackAdmin/CLAUDE.md) for full logging documentation with category details.
 
+## Swift 6 Concurrency
+
+The Admin app uses `SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor` build setting, which means all types default to `@MainActor` unless explicitly opted out.
+
+### Key Patterns
+
+**Opting out of MainActor for utility types:**
+```swift
+// Types that need to be accessed from any actor should use nonisolated
+nonisolated
+enum AppLogger {
+    static let api = LoggerWrapper(category: "API")
+    // ...
+}
+
+nonisolated
+struct LoggerWrapper: @unchecked Sendable {
+    // ...
+}
+```
+
+**Thread-safe global state:**
+```swift
+// For simple flags where data races have no safety impact
+nonisolated(unsafe) private var _loggingEnabled = true
+```
+
+**OSLog.Logger Sendable conformance:**
+Apple's `OSLog.Logger` is thread-safe but not yet marked as `Sendable`. Use `@unchecked Sendable` for wrappers:
+```swift
+struct LoggerWrapper: @unchecked Sendable {
+    private let logger: Logger  // Thread-safe per Apple
+}
+```
+
+### Common Issues
+
+1. **"Main actor-isolated static property cannot be accessed from nonisolated context"**
+   - Cause: Type defaults to `@MainActor` due to project setting
+   - Fix: Add `nonisolated` attribute to the type
+
+2. **"Call to main actor-isolated instance method in synchronous nonisolated context"**
+   - Cause: Method on a `@MainActor` type called from non-MainActor context
+   - Fix: Mark the type or method as `nonisolated`
+
+3. **Actor initializers are nonisolated by default in Swift 6**
+   - Code in `actor` init methods runs in nonisolated context
+   - Avoid accessing MainActor-isolated types from actor inits
+
 ## Analytics & Tracking
 
 ### View Event Tracking

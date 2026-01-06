@@ -269,6 +269,14 @@ AppLogger.keychain.info("Token saved")
 **Logging Control:**
 - `AppLogger.isEnabled` - Global flag to enable/disable all logging (default: `true`)
 
+**Swift 6 Concurrency:**
+The project uses `SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor`, meaning all types default to `@MainActor`. The `AppLogger` and `LoggerWrapper` are explicitly marked `nonisolated` to opt out, allowing them to be called from any actor (including `AdminAPIClient` which is an actor).
+
+Key patterns:
+- `nonisolated enum AppLogger` - Opts out of MainActor default
+- `nonisolated struct LoggerWrapper: @unchecked Sendable` - Thread-safe wrapper
+- `nonisolated(unsafe) private var _loggingEnabled` - Simple flag where races have no safety impact
+
 ## Developer Commands (DEBUG/TestFlight only)
 
 `DeveloperCommandsView` is available in Settings when running in DEBUG or TestFlight builds:
