@@ -41,18 +41,32 @@ public struct FeedbackListView: View {
                 }
                 #endif
 
-                if config.buttons.segmentedControl.display {
-                    ToolbarItem(placement: .automatic) {
-                        Menu {
-                            Picker("Filter", selection: $viewModel.selectedStatus) {
+                ToolbarItem(placement: .automatic) {
+                    Menu {
+                        // Sort options
+                        Picker(selection: $viewModel.selectedSort) {
+                            ForEach(FeedbackSortOption.allCases, id: \.self) { option in
+                                Text(option.localizedName).tag(option)
+                            }
+                        } label: {
+                            Label("Sort", systemImage: "arrow.up.arrow.down")
+                        }
+
+                        // Status filter (if enabled)
+                        if config.buttons.segmentedControl.display {
+                            Divider()
+
+                            Picker(selection: $viewModel.selectedStatus) {
                                 Text("All").tag(FeedbackStatus?.none)
                                 ForEach(FeedbackStatus.allCases, id: \.self) { status in
                                     Text(status.displayName).tag(FeedbackStatus?.some(status))
                                 }
+                            } label: {
+                                Label("Status", systemImage: "line.3.horizontal.decrease.circle")
                             }
-                        } label: {
-                            Label("Filter", systemImage: "line.3.horizontal.decrease.circle")
                         }
+                    } label: {
+                        Label("Filter", systemImage: "line.3.horizontal.decrease.circle")
                     }
                 }
 
@@ -135,15 +149,38 @@ struct FeedbackListContentView: View {
     private var config: SwiftlyFeedbackConfiguration { SwiftlyFeedback.config }
 
     var body: some View {
-        List(viewModel.feedbackItems) { feedback in
-            NavigationLink(value: feedback) {
-                FeedbackRowView(feedback: feedback) {
-                    Task { await viewModel.toggleVote(for: feedback) }
+        ScrollView {
+            LazyVStack(spacing: 12) {
+                ForEach(viewModel.feedbackItems) { feedback in
+                    NavigationLink(value: feedback) {
+                        FeedbackCardView(feedback: feedback) {
+                            Task { await viewModel.toggleVote(for: feedback) }
+                        }
+                    }
+                    .buttonStyle(.plain)
+                    .transition(.opacity.combined(with: .move(edge: .top)))
                 }
             }
+            .padding()
+            .animation(.smooth, value: viewModel.feedbackItems)
         }
         .navigationDestination(for: Feedback.self) { feedback in
             FeedbackDetailView(feedback: feedback, swiftlyFeedback: viewModel.swiftlyFeedback)
+        }
+    }
+}
+
+/// Sort options for the feedback list
+public enum FeedbackSortOption: String, CaseIterable, Sendable {
+    case votes = "Votes"
+    case newest = "Newest"
+    case oldest = "Oldest"
+
+    var localizedName: String {
+        switch self {
+        case .votes: return String(localized: "Votes", bundle: .module)
+        case .newest: return String(localized: "Newest", bundle: .module)
+        case .oldest: return String(localized: "Oldest", bundle: .module)
         }
     }
 }
@@ -159,6 +196,9 @@ final class FeedbackListViewModel {
     var showingSubmissionDisabledAlert = false
     var selectedStatus: FeedbackStatus? {
         didSet { Task { await loadFeedback() } }
+    }
+    var selectedSort: FeedbackSortOption = .votes {
+        didSet { sortFeedback() }
     }
 
     let swiftlyFeedback: SwiftlyFeedback?
@@ -184,6 +224,7 @@ final class FeedbackListViewModel {
                 let items = try await sf.getFeedback(status: selectedStatus)
                 try Task.checkCancellation()
                 feedbackItems = items
+                sortFeedback()
                 hasLoadedOnce = true
             } catch is CancellationError {
                 // Silently ignore cancellation - another request is taking over
@@ -201,6 +242,19 @@ final class FeedbackListViewModel {
     func loadFeedbackIfNeeded() async {
         guard !hasLoadedOnce else { return }
         await loadFeedback()
+    }
+
+    private func sortFeedback() {
+        withAnimation(.smooth) {
+            switch selectedSort {
+            case .votes:
+                feedbackItems.sort { $0.voteCount > $1.voteCount }
+            case .newest:
+                feedbackItems.sort { ($0.createdAt ?? .distantPast) > ($1.createdAt ?? .distantPast) }
+            case .oldest:
+                feedbackItems.sort { ($0.createdAt ?? .distantPast) < ($1.createdAt ?? .distantPast) }
+            }
+        }
     }
 
     func toggleVote(for feedback: Feedback) async {

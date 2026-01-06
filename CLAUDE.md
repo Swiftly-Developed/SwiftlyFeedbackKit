@@ -123,6 +123,28 @@ SwiftlyFeedback.config.loggingEnabled = false
 - `FeedbackCategory.iconName` provides SF Symbol names for each category
 - `VoteButton` is disabled and dimmed for feedback with non-votable status
 
+### FeedbackListView Sorting & Animation
+
+The `FeedbackListView` includes built-in sorting and smooth animations:
+
+**Sort Options (`FeedbackSortOption` enum):**
+| Option | Description |
+|--------|-------------|
+| `.votes` | Highest vote count first (default) |
+| `.newest` | Most recently created first |
+| `.oldest` | Oldest first |
+
+**Features:**
+- Sort picker in toolbar menu (combined with status filter if enabled)
+- Sorting is applied client-side after fetching
+- Smooth `.smooth` animation when list order changes
+- Items animate with `.opacity.combined(with: .move(edge: .top))` transition
+
+**Implementation:**
+- `FeedbackListViewModel.selectedSort` - Current sort option (default: `.votes`)
+- `sortFeedback()` - Applies sort with `withAnimation(.smooth)`
+- Animation value: `.animation(.smooth, value: viewModel.feedbackItems)`
+
 ### Request Deduplication
 - `FeedbackListViewModel` tracks in-flight requests via `loadTask` property
 - New requests cancel any pending request to prevent race conditions
