@@ -4,6 +4,7 @@ struct EmailVerificationView: View {
     @Bindable var viewModel: AuthViewModel
     @State private var resendCooldown = 0
     @State private var timer: Timer?
+    @FocusState private var isCodeFieldFocused: Bool
 
     var body: some View {
         VStack(spacing: 24) {
@@ -31,6 +32,13 @@ struct EmailVerificationView: View {
                     .textFieldStyle(.roundedBorder)
                     .textContentType(.oneTimeCode)
                     .autocorrectionDisabled()
+                    .focused($isCodeFieldFocused)
+                    .onSubmit {
+                        if viewModel.verificationCode.count == 8 {
+                            Task { await viewModel.verifyEmail() }
+                        }
+                    }
+                    .submitLabel(.go)
                     #if os(iOS)
                     .textInputAutocapitalization(.characters)
                     #endif
@@ -89,6 +97,9 @@ struct EmailVerificationView: View {
             Button("OK", role: .cancel) {}
         } message: {
             Text(viewModel.errorMessage ?? "An error occurred")
+        }
+        .onAppear {
+            isCodeFieldFocused = true
         }
         .onDisappear {
             timer?.invalidate()

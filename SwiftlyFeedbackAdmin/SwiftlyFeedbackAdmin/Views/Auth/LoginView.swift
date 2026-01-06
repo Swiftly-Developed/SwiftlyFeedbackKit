@@ -3,6 +3,13 @@ import SwiftUI
 struct LoginView: View {
     @Bindable var viewModel: AuthViewModel
     let onSwitchToSignup: () -> Void
+    let onForgotPassword: () -> Void
+
+    private enum LoginField: Hashable {
+        case email, password
+    }
+
+    @FocusState private var focusedField: LoginField?
 
     var body: some View {
         VStack(spacing: 24) {
@@ -27,6 +34,9 @@ struct LoginView: View {
                 TextField("Email", text: $viewModel.loginEmail)
                     .textFieldStyle(.roundedBorder)
                     .textContentType(.emailAddress)
+                    .focused($focusedField, equals: .email)
+                    .onSubmit { focusedField = .password }
+                    .submitLabel(.next)
                     #if os(iOS)
                     .textInputAutocapitalization(.never)
                     .keyboardType(.emailAddress)
@@ -35,6 +45,19 @@ struct LoginView: View {
                 SecureField("Password", text: $viewModel.loginPassword)
                     .textFieldStyle(.roundedBorder)
                     .textContentType(.password)
+                    .focused($focusedField, equals: .password)
+                    .onSubmit {
+                        Task { await viewModel.login() }
+                    }
+                    .submitLabel(.go)
+
+                HStack {
+                    Spacer()
+                    Button("Forgot Password?") {
+                        onForgotPassword()
+                    }
+                    .font(.subheadline)
+                }
 
                 Button {
                     Task {
@@ -66,9 +89,12 @@ struct LoginView: View {
         }
         .padding(32)
         .frame(maxWidth: 400)
+        .onAppear {
+            focusedField = .email
+        }
     }
 }
 
 #Preview {
-    LoginView(viewModel: AuthViewModel()) {}
+    LoginView(viewModel: AuthViewModel(), onSwitchToSignup: {}, onForgotPassword: {})
 }

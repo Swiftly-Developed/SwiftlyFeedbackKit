@@ -2,27 +2,48 @@ import SwiftUI
 
 struct AuthContainerView: View {
     @Bindable var viewModel: AuthViewModel
-    @State private var showingSignup = false
+
+    private enum AuthMode {
+        case login, signup, forgotPassword
+    }
+
+    @State private var authMode: AuthMode = .login
 
     var body: some View {
         ScrollView {
             VStack {
                 Spacer(minLength: 40)
 
-                if showingSignup {
-                    SignupView(viewModel: viewModel) {
-                        withAnimation {
-                            showingSignup = false
+                switch authMode {
+                case .login:
+                    LoginView(
+                        viewModel: viewModel,
+                        onSwitchToSignup: {
+                            withAnimation { authMode = .signup }
+                        },
+                        onForgotPassword: {
+                            withAnimation { authMode = .forgotPassword }
                         }
+                    )
+                    .transition(.move(edge: .leading).combined(with: .opacity))
+
+                case .signup:
+                    SignupView(viewModel: viewModel) {
+                        withAnimation { authMode = .login }
                     }
                     .transition(.move(edge: .trailing).combined(with: .opacity))
-                } else {
-                    LoginView(viewModel: viewModel) {
-                        withAnimation {
-                            showingSignup = true
+
+                case .forgotPassword:
+                    ForgotPasswordView(
+                        viewModel: viewModel,
+                        onBackToLogin: {
+                            withAnimation { authMode = .login }
+                        },
+                        onPasswordReset: {
+                            withAnimation { authMode = .login }
                         }
-                    }
-                    .transition(.move(edge: .leading).combined(with: .opacity))
+                    )
+                    .transition(.move(edge: .trailing).combined(with: .opacity))
                 }
 
                 Spacer(minLength: 40)

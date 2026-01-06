@@ -144,46 +144,92 @@ The Admin app uses `SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor` build setting, wh
 
 ### Key Patterns
 
-**Opting out of MainActor for utility types:**
+**1. Data Transfer Objects (DTOs) and Models:**
+
+All Codable model types must be marked `nonisolated` so their Codable conformances can be used from any actor context (e.g., when `actor AdminAPIClient` decodes responses):
+
 ```swift
-// Types that need to be accessed from any actor should use nonisolated
+// Models/FeedbackModels.swift
+nonisolated
+struct Feedback: Codable, Identifiable, Sendable, Hashable {
+    let id: UUID
+    let title: String
+    // ...
+}
+
+nonisolated
+struct CreateFeedbackRequest: Encodable, Sendable {
+    let title: String
+    let description: String
+}
+```
+
+**2. Utility Types and Services:**
+
+Types that need to be accessed from any actor should use `nonisolated`:
+
+```swift
+// Services that are thread-safe can opt out of MainActor
+nonisolated
+enum KeychainService {
+    static func saveToken(_ token: String) throws { ... }
+    static func getToken() -> String? { ... }
+}
+
 nonisolated
 enum AppLogger {
     static let api = LoggerWrapper(category: "API")
-    // ...
-}
-
-nonisolated
-struct LoggerWrapper: @unchecked Sendable {
-    // ...
 }
 ```
 
-**Thread-safe global state:**
+**3. Thread-safe global state:**
+
 ```swift
 // For simple flags where data races have no safety impact
 nonisolated(unsafe) private var _loggingEnabled = true
+
+// For constant strings at module level
+private nonisolated(unsafe) let loggerSubsystem = "com.swiftlyfeedback.admin"
 ```
 
-**OSLog.Logger Sendable conformance:**
+**4. OSLog.Logger Sendable conformance:**
+
 Apple's `OSLog.Logger` is thread-safe but not yet marked as `Sendable`. Use `@unchecked Sendable` for wrappers:
+
 ```swift
+nonisolated
 struct LoggerWrapper: @unchecked Sendable {
     private let logger: Logger  // Thread-safe per Apple
 }
 ```
 
+### Swift 6.2 Changes
+
+Swift 6.2 introduces "Approachable Concurrency" with these key changes:
+
+1. **`nonisolated(nonsending)`** - New default for async functions that keeps them on caller's actor
+2. **`@concurrent`** - Explicit opt-in to run on global executor (old behavior)
+3. **Improved Sendable inference** - Compiler automatically infers `@Sendable` for methods on Sendable types
+
+For this project, the main impact is that data models should be:
+- Marked `nonisolated` to opt out of MainActor isolation
+- Marked `Sendable` for safe transfer across actor boundaries
+
 ### Common Issues
 
-1. **"Main actor-isolated static property cannot be accessed from nonisolated context"**
-   - Cause: Type defaults to `@MainActor` due to project setting
-   - Fix: Add `nonisolated` attribute to the type
+1. **"Main actor-isolated conformance of 'X' to 'Codable' cannot be used in actor-isolated context"**
+   - Cause: Model type defaults to `@MainActor`, so its Codable conformance is also MainActor-isolated
+   - Fix: Add `nonisolated` attribute to the model type
 
-2. **"Call to main actor-isolated instance method in synchronous nonisolated context"**
-   - Cause: Method on a `@MainActor` type called from non-MainActor context
-   - Fix: Mark the type or method as `nonisolated`
+2. **"Main actor-isolated static method cannot be called from outside of the actor"**
+   - Cause: Static method on a type that defaults to `@MainActor`
+   - Fix: Mark the containing type as `nonisolated`
 
-3. **Actor initializers are nonisolated by default in Swift 6**
+3. **"Main actor-isolated let cannot be referenced from a nonisolated context"**
+   - Cause: Module-level `let` constant inherits MainActor isolation
+   - Fix: Use `nonisolated(unsafe) let` for constants
+
+4. **Actor initializers are nonisolated by default in Swift 6**
    - Code in `actor` init methods runs in nonisolated context
    - Avoid accessing MainActor-isolated types from actor inits
 
@@ -366,6 +412,51 @@ All notification emails are sent asynchronously to avoid blocking API responses.
 ### Other Email Types
 - **Email Verification**: Sent on user signup with 8-character verification code
 - **Project Invite**: Sent when inviting members to a project with invite code
+- **Password Reset**: Sent when user requests password reset with 8-character code (1-hour expiry)
+
+## Password Reset
+
+Users can reset their password if they forget it via the "Forgot Password?" link on the login screen.
+
+### Flow
+1. User enters their email on the forgot password screen
+2. Server sends a password reset email with an 8-character code (if account exists)
+3. User enters the code and their new password
+4. Password is updated and all sessions are invalidated (force re-login)
+
+### Security Features
+- 1-hour token expiry (shorter than email verification)
+- Single-use tokens (marked as used after successful reset)
+- Force re-login on all devices after password reset
+- Email enumeration prevention (always returns success message regardless of whether account exists)
+- 60-second resend cooldown in the UI
+
+### Server Endpoints
+- `POST /auth/forgot-password` - Request password reset email (public)
+- `POST /auth/reset-password` - Reset password with code (public)
+
+**Forgot password request:**
+```json
+{
+  "email": "user@example.com"
+}
+```
+
+**Reset password request:**
+```json
+{
+  "code": "ABCD1234",
+  "new_password": "newpassword123"
+}
+```
+
+### Database Model (PasswordReset)
+- `id` (UUID, PK)
+- `user_id` (UUID, FK to users, cascade delete)
+- `token` (String, unique) - 8-character code
+- `expires_at` (DateTime) - 1 hour from creation
+- `used_at` (DateTime?, nullable) - Set when token is used
+- `created_at` (Timestamp)
 
 ## Slack Integration
 

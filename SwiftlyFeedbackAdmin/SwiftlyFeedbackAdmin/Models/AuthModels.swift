@@ -1,5 +1,11 @@
 import Foundation
 
+// MARK: - Auth Models
+//
+// All models are marked `nonisolated` to opt out of the project's default MainActor isolation.
+// This allows their Codable conformances to be used from any actor context (e.g., AdminAPIClient).
+
+nonisolated
 struct User: Codable, Identifiable, Sendable {
     let id: UUID
     let email: String
@@ -11,45 +17,65 @@ struct User: Codable, Identifiable, Sendable {
     let createdAt: Date?
 }
 
-struct LoginRequest: Encodable {
+nonisolated
+struct LoginRequest: Encodable, Sendable {
     let email: String
     let password: String
 }
 
-struct SignupRequest: Encodable {
+nonisolated
+struct SignupRequest: Encodable, Sendable {
     let email: String
     let name: String
     let password: String
 }
 
-struct AuthResponse: Decodable {
+nonisolated
+struct AuthResponse: Decodable, Sendable {
     let token: String
     let user: User
 }
 
-struct ChangePasswordRequest: Encodable {
+nonisolated
+struct ChangePasswordRequest: Encodable, Sendable {
     let currentPassword: String
     let newPassword: String
 }
 
-struct DeleteAccountRequest: Encodable {
+nonisolated
+struct DeleteAccountRequest: Encodable, Sendable {
     let password: String
 }
 
-struct VerifyEmailRequest: Encodable {
+nonisolated
+struct VerifyEmailRequest: Encodable, Sendable {
     let code: String
 }
 
-struct VerifyEmailResponse: Decodable {
+nonisolated
+struct VerifyEmailResponse: Decodable, Sendable {
     let message: String
     let user: User
 }
 
-struct MessageResponse: Decodable {
+nonisolated
+struct MessageResponse: Decodable, Sendable {
     let message: String
 }
 
-struct UpdateNotificationSettingsRequest: Encodable {
+nonisolated
+struct UpdateNotificationSettingsRequest: Encodable, Sendable {
     let notifyNewFeedback: Bool?
     let notifyNewComments: Bool?
+}
+
+nonisolated
+struct ForgotPasswordRequest: Encodable, Sendable {
+    let email: String
+}
+
+nonisolated
+struct ResetPasswordRequest: Encodable, Sendable {
+    let code: String
+    let newPassword: String
 }

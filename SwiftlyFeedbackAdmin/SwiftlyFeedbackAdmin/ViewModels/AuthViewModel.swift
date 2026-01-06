@@ -22,6 +22,13 @@ final class AuthViewModel {
     // Email verification
     var verificationCode = ""
 
+    // Password reset
+    var resetEmail = ""
+    var resetCode = ""
+    var resetNewPassword = ""
+    var resetConfirmPassword = ""
+    var resetEmailSent = false
+
     var needsEmailVerification: Bool {
         let needs = isAuthenticated && currentUser?.isEmailVerified == false
         AppLogger.viewModel.debug("🔍 needsEmailVerification: \(needs) (isAuthenticated: \(self.isAuthenticated), isEmailVerified: \(self.currentUser?.isEmailVerified ?? false))")
@@ -281,5 +288,76 @@ final class AuthViewModel {
             AppLogger.viewModel.error("❌ Failed to update notification settings: \(error.localizedDescription)")
             showError(message: error.localizedDescription)
         }
+    }
+
+    // MARK: - Password Reset
+
+    func requestPasswordReset() async {
+        AppLogger.viewModel.info("🔑 Password reset request initiated for: \(self.resetEmail)")
+        guard !resetEmail.isEmpty else {
+            AppLogger.viewModel.warning("⚠️ Password reset validation failed - empty email")
+            showError(message: "Please enter your email address")
+            return
+        }
+
+        isLoading = true
+        errorMessage = nil
+
+        do {
+            _ = try await AuthService.shared.requestPasswordReset(email: resetEmail)
+            resetEmailSent = true
+            AppLogger.viewModel.info("✅ Password reset email sent")
+        } catch {
+            AppLogger.viewModel.error("❌ Password reset request failed: \(error.localizedDescription)")
+            showError(message: error.localizedDescription)
+        }
+
+        isLoading = false
+    }
+
+    func resetPassword() async -> Bool {
+        AppLogger.viewModel.info("🔄 Password reset initiated with code")
+        guard resetCode.count == 8 else {
+            AppLogger.viewModel.warning("⚠️ Invalid reset code length: \(self.resetCode.count)")
+            showError(message: "Please enter the 8-character reset code")
+            return false
+        }
+
+        guard resetNewPassword.count >= 8 else {
+            AppLogger.viewModel.warning("⚠️ Password reset validation failed - password too short")
+            showError(message: "Password must be at least 8 characters")
+            return false
+        }
+
+        guard resetNewPassword == resetConfirmPassword else {
+            AppLogger.viewModel.warning("⚠️ Password reset validation failed - passwords don't match")
+            showError(message: "Passwords do not match")
+            return false
+        }
+
+        isLoading = true
+        errorMessage = nil
+
+        do {
+            _ = try await AuthService.shared.resetPassword(code: resetCode, newPassword: resetNewPassword)
+            AppLogger.viewModel.info("✅ Password reset successful")
+            clearResetState()
+            isLoading = false
+            return true
+        } catch {
+            AppLogger.viewModel.error("❌ Password reset failed: \(error.localizedDescription)")
+            showError(message: error.localizedDescription)
+            isLoading = false
+            return false
+        }
+    }
+
+    func clearResetState() {
+        AppLogger.viewModel.info("🧹 Clearing password reset state")
+        resetEmail = ""
+        resetCode = ""
+        resetNewPassword = ""
+        resetConfirmPassword = ""
+        resetEmailSent = false
     }
 }

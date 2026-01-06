@@ -75,3 +75,21 @@ struct UpdateNotificationSettingsDTO: Content {
     let notifyNewFeedback: Bool?
     let notifyNewComments: Bool?
 }
+
+struct ForgotPasswordDTO: Content, Validatable {
+    let email: String
+
+    static func validations(_ validations: inout Validations) {
+        validations.add("email", as: String.self, is: .email)
+    }
+}
+
+struct ResetPasswordDTO: Content, Validatable {
+    let code: String
+    let newPassword: String
+
+    static func validations(_ validations: inout Validations) {
+        validations.add("code", as: String.self, is: .count(8...8))
+        validations.add("new_password", as: String.self, is: .count(8...))
+    }
+}

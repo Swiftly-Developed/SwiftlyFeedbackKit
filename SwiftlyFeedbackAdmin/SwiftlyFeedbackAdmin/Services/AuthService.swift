@@ -60,11 +60,8 @@ actor AuthService {
             AppLogger.auth.warning("⚠️ Server logout failed (will clear token anyway): \(error.localizedDescription)")
             // Even if server logout fails, clear local token
         }
-        // Run on main thread to ensure Keychain access is reliable
-        await MainActor.run {
-            KeychainService.deleteToken()
-            AppLogger.auth.info("🔑 Token deleted from keychain")
-        }
+        KeychainService.deleteToken()
+        AppLogger.auth.info("🔑 Token deleted from keychain")
     }
 
     func getCurrentUser() async throws -> User {
@@ -92,11 +89,8 @@ actor AuthService {
             try await AdminAPIClient.shared.put(path: "auth/password", body: request, requiresAuth: true)
             AppLogger.auth.info("✅ Password changed successfully")
             // Password changed successfully, token is invalidated - clear local token
-            // Run on main thread to ensure Keychain access is reliable
-            await MainActor.run {
-                KeychainService.deleteToken()
-                AppLogger.auth.info("🔑 Token deleted from keychain after password change")
-            }
+            KeychainService.deleteToken()
+            AppLogger.auth.info("🔑 Token deleted from keychain after password change")
         } catch {
             AppLogger.auth.error("❌ Password change failed: \(error.localizedDescription)")
             throw error
@@ -109,11 +103,8 @@ actor AuthService {
         do {
             try await AdminAPIClient.shared.delete(path: "auth/account", body: request, requiresAuth: true)
             AppLogger.auth.info("✅ Account deleted successfully")
-            // Run on main thread to ensure Keychain access is reliable
-            await MainActor.run {
-                KeychainService.deleteToken()
-                AppLogger.auth.info("🔑 Token deleted from keychain after account deletion")
-            }
+            KeychainService.deleteToken()
+            AppLogger.auth.info("🔑 Token deleted from keychain after account deletion")
         } catch {
             AppLogger.auth.error("❌ Account deletion failed: \(error.localizedDescription)")
             throw error
@@ -145,6 +136,40 @@ actor AuthService {
             return response
         } catch {
             AppLogger.auth.error("❌ Resend verification failed: \(error.localizedDescription)")
+            throw error
+        }
+    }
+
+    func requestPasswordReset(email: String) async throws -> MessageResponse {
+        AppLogger.auth.info("🔑 Requesting password reset for email: \(email)")
+        let request = ForgotPasswordRequest(email: email)
+        do {
+            let response: MessageResponse = try await AdminAPIClient.shared.post(
+                path: "auth/forgot-password",
+                body: request,
+                requiresAuth: false
+            )
+            AppLogger.auth.info("✅ Password reset requested: \(response.message)")
+            return response
+        } catch {
+            AppLogger.auth.error("❌ Password reset request failed: \(error.localizedDescription)")
+            throw error
+        }
+    }
+
+    func resetPassword(code: String, newPassword: String) async throws -> MessageResponse {
+        AppLogger.auth.info("🔄 Resetting password with code")
+        let request = ResetPasswordRequest(code: code, newPassword: newPassword)
+        do {
+            let response: MessageResponse = try await AdminAPIClient.shared.post(
+                path: "auth/reset-password",
+                body: request,
+                requiresAuth: false
+            )
+            AppLogger.auth.info("✅ Password reset successful: \(response.message)")
+            return response
+        } catch {
+            AppLogger.auth.error("❌ Password reset failed: \(error.localizedDescription)")
             throw error
         }
     }

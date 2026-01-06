@@ -55,6 +55,7 @@ Sources/App/
 │   ├── ProjectMember.swift
 │   ├── ProjectInvite.swift
 │   ├── EmailVerification.swift
+│   ├── PasswordReset.swift
 │   ├── Feedback.swift
 │   ├── Vote.swift
 │   ├── Comment.swift
@@ -95,6 +96,8 @@ All routes prefixed with `/api/v1`.
 - `POST /auth/resend-verification` - Resend verification email (requires auth)
 - `PUT /auth/password` - Change password (requires auth)
 - `DELETE /auth/account` - Delete account (requires auth)
+- `POST /auth/forgot-password` - Request password reset email (public)
+- `POST /auth/reset-password` - Reset password with code (public)
 
 ### Projects (Bearer token required)
 - `GET /projects` - List user's projects
@@ -199,6 +202,37 @@ All routes prefixed with `/api/v1`.
 - User authentication uses Bearer tokens via `UserToken` model
 - API key authentication uses `X-API-Key` header for SDK requests
 - Use `req.auth.require(User.self)` for authenticated routes
+
+### Password Reset
+
+The `PasswordReset` model stores password reset tokens:
+
+```swift
+final class PasswordReset: Model {
+    @ID var id: UUID?
+    @Parent var user: User
+    @Field var token: String      // 8-character code
+    @Field var expiresAt: Date    // 1 hour from creation
+    @OptionalField var usedAt: Date?
+    @Timestamp var createdAt: Date?
+}
+```
+
+**Security features:**
+- 8-character alphanumeric code (excludes ambiguous characters: 0, O, I, 1, L)
+- 1-hour expiry (shorter than email verification)
+- Single-use tokens (marked as used after successful reset)
+- Email enumeration prevention (always returns success)
+- All user sessions invalidated after password reset
+
+**Request/Response:**
+```json
+// POST /auth/forgot-password
+{ "email": "user@example.com" }
+
+// POST /auth/reset-password
+{ "code": "ABCD1234", "new_password": "newpassword123" }
+```
 
 ## Feedback Merging
 

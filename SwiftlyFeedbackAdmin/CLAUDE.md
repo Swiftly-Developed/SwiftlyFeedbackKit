@@ -40,7 +40,8 @@ SwiftlyFeedbackAdmin/
 │   │   ├── AuthContainerView.swift    # Auth flow container
 │   │   ├── LoginView.swift            # Login form
 │   │   ├── SignupView.swift           # Signup form
-│   │   └── EmailVerificationView.swift # Email verification screen
+│   │   ├── EmailVerificationView.swift # Email verification screen
+│   │   └── ForgotPasswordView.swift   # Password reset flow
 │   ├── Projects/
 │   │   ├── ProjectListView.swift      # Project list with 3 view modes (list/table/grid)
 │   │   ├── ProjectDetailView.swift    # Project details & feedback
@@ -79,6 +80,33 @@ SwiftlyFeedbackAdmin/
 3. Token stored securely in Keychain via `KeychainService`
 4. `AuthViewModel` manages authentication state including `needsEmailVerification`
 5. `AdminAPIClient` includes Bearer token in requests
+
+### Password Reset Flow
+
+1. User taps "Forgot Password?" on `LoginView`
+2. `ForgotPasswordView` shows email entry form
+3. Server sends reset code email (8-char code, 1-hour expiry)
+4. View transitions to code + new password entry
+5. On success, user is returned to login screen to log in with new password
+
+**AuthViewModel Properties:**
+- `resetEmail` - Email address for reset
+- `resetCode` - 8-character reset code
+- `resetNewPassword` / `resetConfirmPassword` - New password fields
+- `resetEmailSent` - Whether code has been sent
+
+**AuthViewModel Methods:**
+- `requestPasswordReset()` - Send reset code email
+- `resetPassword()` - Validate code and set new password
+- `clearResetState()` - Reset all password reset fields
+
+### FocusState Navigation
+
+All auth forms use `@FocusState` for keyboard navigation:
+- **LoginView**: Email → Password → Submit
+- **SignupView**: Name → Email → Password → Confirm → Submit
+- **ForgotPasswordView**: Email → Submit OR Code → New Password → Confirm → Submit
+- **EmailVerificationView**: Auto-focus code field
 
 ## Code Patterns
 

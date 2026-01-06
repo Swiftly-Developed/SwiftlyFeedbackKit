@@ -55,6 +55,7 @@ func configure(_ app: Application) async throws {
     app.migrations.add(AddProjectMondayIntegration())
     app.migrations.add(AddProjectLinearIntegration())
     app.migrations.add(AddIntegrationActiveToggles())
+    app.migrations.add(CreatePasswordReset())
 
     try await app.autoMigrate()
 

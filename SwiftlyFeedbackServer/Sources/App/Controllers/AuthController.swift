@@ -8,6 +8,8 @@ struct AuthController: RouteCollection {
         auth.post("signup", use: signup)
         auth.post("login", use: login)
         auth.post("verify-email", use: verifyEmail)
+        auth.post("forgot-password", use: forgotPassword)
+        auth.post("reset-password", use: resetPassword)
 
         // Protected routes
         let tokenProtected = auth.grouped(UserToken.authenticator())
@@ -271,5 +273,82 @@ struct AuthController: RouteCollection {
 
         try await user.save(on: req.db)
         return try user.asPublic()
+    }
+
+    @Sendable
+    func forgotPassword(req: Request) async throws -> MessageResponseDTO {
+        try ForgotPasswordDTO.validate(content: req)
+        let dto = try req.content.decode(ForgotPasswordDTO.self)
+
+        // Find user by email (case-insensitive)
+        if let user = try await User.query(on: req.db)
+            .filter(\.$email == dto.email.lowercased())
+            .first() {
+
+            // Delete any existing password reset tokens for this user
+            try await PasswordReset.query(on: req.db)
+                .filter(\.$user.$id == user.requireID())
+                .delete()
+
+            // Create new password reset token (1-hour expiry)
+            let passwordReset = PasswordReset(userId: try user.requireID())
+            try await passwordReset.save(on: req.db)
+
+            // Send password reset email
+            try await req.emailService.sendPasswordResetEmail(
+                to: user.email,
+                userName: user.name,
+                resetCode: passwordReset.token
+            )
+        }
+
+        // Always return success to prevent email enumeration
+        return MessageResponseDTO(message: "If an account exists with that email, a password reset code has been sent.")
+    }
+
+    @Sendable
+    func resetPassword(req: Request) async throws -> MessageResponseDTO {
+        let dto = try req.content.decode(ResetPasswordDTO.self)
+
+        // Manual validation
+        guard dto.code.count == 8 else {
+            throw Abort(.badRequest, reason: "Code must be exactly 8 characters")
+        }
+        guard dto.newPassword.count >= 8 else {
+            throw Abort(.badRequest, reason: "Password must be at least 8 characters")
+        }
+
+        // Find the password reset record
+        guard let passwordReset = try await PasswordReset.query(on: req.db)
+            .filter(\.$token == dto.code.uppercased())
+            .with(\.$user)
+            .first() else {
+            throw Abort(.notFound, reason: "Invalid reset code")
+        }
+
+        // Check if already used
+        if passwordReset.isUsed {
+            throw Abort(.badRequest, reason: "This reset code has already been used")
+        }
+
+        // Check if expired
+        if passwordReset.isExpired {
+            throw Abort(.gone, reason: "Reset code has expired. Please request a new one.")
+        }
+
+        // Hash new password and update user
+        passwordReset.user.passwordHash = try Bcrypt.hash(dto.newPassword)
+        try await passwordReset.user.save(on: req.db)
+
+        // Mark token as used
+        passwordReset.usedAt = Date()
+        try await passwordReset.save(on: req.db)
+
+        // Delete all user tokens (force re-login on all devices)
+        try await UserToken.query(on: req.db)
+            .filter(\.$user.$id == passwordReset.$user.id)
+            .delete()
+
+        return MessageResponseDTO(message: "Password has been reset successfully. Please log in with your new password.")
     }
 }

@@ -4,6 +4,12 @@ struct SignupView: View {
     @Bindable var viewModel: AuthViewModel
     let onSwitchToLogin: () -> Void
 
+    private enum SignupField: Hashable {
+        case name, email, password, confirmPassword
+    }
+
+    @FocusState private var focusedField: SignupField?
+
     var body: some View {
         VStack(spacing: 24) {
             // Header
@@ -27,10 +33,16 @@ struct SignupView: View {
                 TextField("Name", text: $viewModel.signupName)
                     .textFieldStyle(.roundedBorder)
                     .textContentType(.name)
+                    .focused($focusedField, equals: .name)
+                    .onSubmit { focusedField = .email }
+                    .submitLabel(.next)
 
                 TextField("Email", text: $viewModel.signupEmail)
                     .textFieldStyle(.roundedBorder)
                     .textContentType(.emailAddress)
+                    .focused($focusedField, equals: .email)
+                    .onSubmit { focusedField = .password }
+                    .submitLabel(.next)
                     #if os(iOS)
                     .textInputAutocapitalization(.never)
                     .keyboardType(.emailAddress)
@@ -39,10 +51,18 @@ struct SignupView: View {
                 SecureField("Password", text: $viewModel.signupPassword)
                     .textFieldStyle(.roundedBorder)
                     .textContentType(.newPassword)
+                    .focused($focusedField, equals: .password)
+                    .onSubmit { focusedField = .confirmPassword }
+                    .submitLabel(.next)
 
                 SecureField("Confirm Password", text: $viewModel.signupConfirmPassword)
                     .textFieldStyle(.roundedBorder)
                     .textContentType(.newPassword)
+                    .focused($focusedField, equals: .confirmPassword)
+                    .onSubmit {
+                        Task { await viewModel.signup() }
+                    }
+                    .submitLabel(.go)
 
                 Text("Password must be at least 8 characters")
                     .font(.caption)
@@ -79,6 +99,9 @@ struct SignupView: View {
         }
         .padding(32)
         .frame(maxWidth: 400)
+        .onAppear {
+            focusedField = .name
+        }
     }
 }
 
