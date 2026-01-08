@@ -17,16 +17,22 @@ public struct FeedbackDetailView: View {
     }
 
     public var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 16) {
-                FeedbackDetailHeaderView(feedback: feedback)
-                FeedbackDetailVoteView(viewModel: viewModel)
+        Group {
+            if viewModel.hasInvalidApiKey {
+                InvalidApiKeyView()
+            } else {
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 16) {
+                        FeedbackDetailHeaderView(feedback: feedback)
+                        FeedbackDetailVoteView(viewModel: viewModel)
 
-                if config.showCommentSection {
-                    FeedbackDetailCommentsView(viewModel: viewModel)
+                        if config.showCommentSection {
+                            FeedbackDetailCommentsView(viewModel: viewModel)
+                        }
+                    }
+                    .padding()
                 }
             }
-            .padding()
         }
         .navigationTitle(String(localized: Strings.feedbackDetailTitle))
         #if !os(macOS)
@@ -203,6 +209,7 @@ final class FeedbackDetailViewModel {
     var isSubmittingComment = false
     var showingError = false
     var errorMessage: String?
+    var hasInvalidApiKey = false
 
     private let swiftlyFeedback: SwiftlyFeedback?
 
@@ -213,12 +220,15 @@ final class FeedbackDetailViewModel {
 
     func loadComments() async {
         guard let sf = swiftlyFeedback else { return }
+        guard !hasInvalidApiKey else { return }
 
         isLoadingComments = true
         defer { isLoadingComments = false }
 
         do {
             comments = try await sf.getComments(for: currentFeedback.id)
+        } catch let error as SwiftlyFeedbackError where error == .invalidApiKey {
+            hasInvalidApiKey = true
         } catch {
             errorMessage = error.localizedDescription
             showingError = true
@@ -227,6 +237,7 @@ final class FeedbackDetailViewModel {
 
     func toggleVote() async {
         guard let sf = swiftlyFeedback else { return }
+        guard !hasInvalidApiKey else { return }
 
         let config = SwiftlyFeedback.config
 
@@ -260,6 +271,8 @@ final class FeedbackDetailViewModel {
                 mergedAt: currentFeedback.mergedAt,
                 mergedFeedbackIds: currentFeedback.mergedFeedbackIds
             )
+        } catch let error as SwiftlyFeedbackError where error == .invalidApiKey {
+            hasInvalidApiKey = true
         } catch {
             errorMessage = error.localizedDescription
             showingError = true
@@ -268,6 +281,7 @@ final class FeedbackDetailViewModel {
 
     func submitComment() async {
         guard let sf = swiftlyFeedback, !newCommentText.isEmpty else { return }
+        guard !hasInvalidApiKey else { return }
 
         isSubmittingComment = true
         defer { isSubmittingComment = false }
@@ -276,6 +290,8 @@ final class FeedbackDetailViewModel {
             let comment = try await sf.addComment(to: currentFeedback.id, content: newCommentText)
             comments.append(comment)
             newCommentText = ""
+        } catch let error as SwiftlyFeedbackError where error == .invalidApiKey {
+            hasInvalidApiKey = true
         } catch {
             errorMessage = error.localizedDescription
             showingError = true

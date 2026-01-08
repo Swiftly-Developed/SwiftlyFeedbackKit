@@ -128,6 +128,11 @@ public actor APIClient {
             SDKLogger.error("Bad request (400): \(errorMessage ?? "Unknown error")")
             throw SwiftlyFeedbackError.badRequest(message: errorMessage)
         case 401:
+            let errorMessage = parseErrorMessage(from: data)
+            if errorMessage?.lowercased().contains("invalid api key") == true {
+                SDKLogger.error("Invalid API key (401)")
+                throw SwiftlyFeedbackError.invalidApiKey
+            }
             SDKLogger.error("Unauthorized (401)")
             throw SwiftlyFeedbackError.unauthorized
         case 404:
