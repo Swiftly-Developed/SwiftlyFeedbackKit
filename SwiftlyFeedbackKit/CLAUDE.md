@@ -104,9 +104,19 @@ SwiftlyFeedback.config.loggingEnabled = false
 - Request cancellation is handled gracefully - `CancellationError` and `URLError.cancelled` are silently re-thrown without logging
 
 ### Error Handling
-- `SwiftlyFeedbackError` cases: `invalidResponse`, `badRequest(message:)`, `unauthorized`, `notFound`, `conflict`, `serverError(statusCode:)`, `decodingError(underlying:)`
+- `SwiftlyFeedbackError` cases: `invalidResponse`, `badRequest(message:)`, `unauthorized`, `invalidApiKey`, `notFound`, `conflict`, `serverError(statusCode:)`, `networkError(underlying:)`, `decodingError(underlying:)`
 - Server error messages are parsed from response body when available
 - Cancelled requests do not show error alerts to users
+- `SwiftlyFeedbackError` conforms to `Equatable` for pattern matching
+
+### Invalid API Key Handling
+When the server returns a 401 with "Invalid API key" message:
+- SDK throws `.invalidApiKey` error (distinct from generic `.unauthorized`)
+- Views detect this and show `InvalidApiKeyView` - a `ContentUnavailableView` with localized message
+- All toolbar buttons and interactive elements are hidden/disabled
+- Further API calls are blocked via `hasInvalidApiKey` guard
+- Localized strings: `error.invalidApiKey.title`, `error.invalidApiKey.message`
+- Message tells users to contact the app developers for assistance
 
 ### User Identification
 - Uses iCloud user record ID when CloudKit is available and properly configured

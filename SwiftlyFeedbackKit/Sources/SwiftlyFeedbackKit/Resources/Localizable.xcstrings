@@ -407,6 +407,28 @@
           }
         }
       }
+    },
+    "error.invalidApiKey.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Configuration Error"
+          }
+        }
+      }
+    },
+    "error.invalidApiKey.message" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The feedback system is not configured correctly. Please contact the app developers for assistance."
+          }
+        }
+      }
     }
   },
   "version" : "1.0"

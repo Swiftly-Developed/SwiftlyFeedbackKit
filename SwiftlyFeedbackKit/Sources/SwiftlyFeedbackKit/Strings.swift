@@ -150,6 +150,14 @@ public enum Strings {
         LocalizedStringResource("error.generic", bundle: .forClass(BundleToken.self))
     }
 
+    public static var errorInvalidApiKeyTitle: LocalizedStringResource {
+        LocalizedStringResource("error.invalidApiKey.title", bundle: .forClass(BundleToken.self))
+    }
+
+    public static var errorInvalidApiKeyMessage: LocalizedStringResource {
+        LocalizedStringResource("error.invalidApiKey.message", bundle: .forClass(BundleToken.self))
+    }
+
     // MARK: - Feedback Submission Disabled
 
     public static var feedbackSubmissionDisabledTitle: LocalizedStringResource {

@@ -15,7 +15,9 @@ public struct FeedbackListView: View {
     public var body: some View {
         NavigationStack {
             Group {
-                if viewModel.isLoading && viewModel.feedbackItems.isEmpty {
+                if viewModel.hasInvalidApiKey {
+                    InvalidApiKeyView()
+                } else if viewModel.isLoading && viewModel.feedbackItems.isEmpty {
                     ProgressView()
                 } else if viewModel.feedbackItems.isEmpty {
                     FeedbackEmptyStateView(
@@ -28,60 +30,62 @@ public struct FeedbackListView: View {
             }
             .navigationTitle(String(localized: Strings.feedbackListTitle))
             .toolbar {
-                #if os(macOS)
-                ToolbarItem(placement: .navigation) {
-                    Button {
-                        Task { await viewModel.loadFeedback() }
-                    } label: {
-                        Image(systemName: "arrow.clockwise")
-                    }
-                    .disabled(viewModel.isLoading)
-                    .keyboardShortcut("r", modifiers: .command)
-                    .help("Refresh")
-                }
-                #endif
-
-                ToolbarItem(placement: .automatic) {
-                    Menu {
-                        // Sort options
-                        Picker(selection: $viewModel.selectedSort) {
-                            ForEach(FeedbackSortOption.allCases, id: \.self) { option in
-                                Text(option.localizedName).tag(option)
-                            }
+                if !viewModel.hasInvalidApiKey {
+                    #if os(macOS)
+                    ToolbarItem(placement: .navigation) {
+                        Button {
+                            Task { await viewModel.loadFeedback() }
                         } label: {
-                            Label("Sort", systemImage: "arrow.up.arrow.down")
+                            Image(systemName: "arrow.clockwise")
                         }
+                        .disabled(viewModel.isLoading)
+                        .keyboardShortcut("r", modifiers: .command)
+                        .help("Refresh")
+                    }
+                    #endif
 
-                        // Status filter (if enabled)
-                        if config.buttons.segmentedControl.display {
-                            Divider()
-
-                            Picker(selection: $viewModel.selectedStatus) {
-                                Text("All").tag(FeedbackStatus?.none)
-                                ForEach(FeedbackStatus.allCases, id: \.self) { status in
-                                    Text(status.displayName).tag(FeedbackStatus?.some(status))
+                    ToolbarItem(placement: .automatic) {
+                        Menu {
+                            // Sort options
+                            Picker(selection: $viewModel.selectedSort) {
+                                ForEach(FeedbackSortOption.allCases, id: \.self) { option in
+                                    Text(option.localizedName).tag(option)
                                 }
                             } label: {
-                                Label("Status", systemImage: "line.3.horizontal.decrease.circle")
+                                Label("Sort", systemImage: "arrow.up.arrow.down")
                             }
-                        }
-                    } label: {
-                        Label("Filter", systemImage: "line.3.horizontal.decrease.circle")
-                    }
-                }
 
-                if config.buttons.addButton.display {
-                    ToolbarItem(placement: .primaryAction) {
-                        Button {
-                            if config.allowFeedbackSubmission {
-                                viewModel.showingSubmitSheet = true
-                            } else {
-                                viewModel.showingSubmissionDisabledAlert = true
+                            // Status filter (if enabled)
+                            if config.buttons.segmentedControl.display {
+                                Divider()
+
+                                Picker(selection: $viewModel.selectedStatus) {
+                                    Text("All").tag(FeedbackStatus?.none)
+                                    ForEach(FeedbackStatus.allCases, id: \.self) { status in
+                                        Text(status.displayName).tag(FeedbackStatus?.some(status))
+                                    }
+                                } label: {
+                                    Label("Status", systemImage: "line.3.horizontal.decrease.circle")
+                                }
                             }
                         } label: {
-                            Image(systemName: "plus")
+                            Label("Filter", systemImage: "line.3.horizontal.decrease.circle")
                         }
-                        .tint(theme.primaryColor.resolve(for: colorScheme))
+                    }
+
+                    if config.buttons.addButton.display {
+                        ToolbarItem(placement: .primaryAction) {
+                            Button {
+                                if config.allowFeedbackSubmission {
+                                    viewModel.showingSubmitSheet = true
+                                } else {
+                                    viewModel.showingSubmissionDisabledAlert = true
+                                }
+                            } label: {
+                                Image(systemName: "plus")
+                            }
+                            .tint(theme.primaryColor.resolve(for: colorScheme))
+                        }
                     }
                 }
             }
@@ -143,6 +147,16 @@ struct FeedbackEmptyStateView: View {
     }
 }
 
+struct InvalidApiKeyView: View {
+    var body: some View {
+        ContentUnavailableView {
+            Label(String(localized: Strings.errorInvalidApiKeyTitle), systemImage: "exclamationmark.triangle")
+        } description: {
+            Text(Strings.errorInvalidApiKeyMessage)
+        }
+    }
+}
+
 struct FeedbackListContentView: View {
     @Bindable var viewModel: FeedbackListViewModel
 
@@ -194,6 +208,7 @@ final class FeedbackListViewModel {
     var showingError = false
     var errorMessage: String?
     var showingSubmissionDisabledAlert = false
+    var hasInvalidApiKey = false
     var selectedStatus: FeedbackStatus? {
         didSet { Task { await loadFeedback() } }
     }
@@ -212,6 +227,7 @@ final class FeedbackListViewModel {
 
     func loadFeedback() async {
         guard let sf = swiftlyFeedback else { return }
+        guard !hasInvalidApiKey else { return }
 
         // Cancel any in-flight request
         loadTask?.cancel()
@@ -228,6 +244,8 @@ final class FeedbackListViewModel {
                 hasLoadedOnce = true
             } catch is CancellationError {
                 // Silently ignore cancellation - another request is taking over
+            } catch let error as SwiftlyFeedbackError where error == .invalidApiKey {
+                hasInvalidApiKey = true
             } catch {
                 errorMessage = error.localizedDescription
                 showingError = true
@@ -259,6 +277,7 @@ final class FeedbackListViewModel {
 
     func toggleVote(for feedback: Feedback) async {
         guard let sf = swiftlyFeedback else { return }
+        guard !hasInvalidApiKey else { return }
 
         let config = SwiftlyFeedback.config
 
@@ -274,6 +293,8 @@ final class FeedbackListViewModel {
                 _ = try await sf.vote(for: feedback.id)
             }
             await loadFeedback()
+        } catch let error as SwiftlyFeedbackError where error == .invalidApiKey {
+            hasInvalidApiKey = true
         } catch {
             errorMessage = error.localizedDescription
             showingError = true

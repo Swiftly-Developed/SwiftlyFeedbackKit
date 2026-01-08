@@ -23,55 +23,51 @@ public struct SubmitFeedbackView: View {
 
     public var body: some View {
         NavigationStack {
-            formContent
-                .navigationTitle(String(localized: Strings.submitFeedbackTitle))
-                #if os(iOS)
-                .navigationBarTitleDisplayMode(.inline)
-                #endif
-                .toolbar {
-                    #if os(macOS)
-                    ToolbarItem(placement: .cancellationAction) {
-                        Button(String(localized: Strings.cancelButton)) {
-                            dismiss()
-                            onDismiss()
-                        }
+            Group {
+                if viewModel.hasInvalidApiKey {
+                    InvalidApiKeyView()
+                } else {
+                    formContent
+                }
+            }
+            .navigationTitle(String(localized: Strings.submitFeedbackTitle))
+            #if os(iOS)
+            .navigationBarTitleDisplayMode(.inline)
+            #endif
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button(String(localized: Strings.cancelButton)) {
+                        dismiss()
+                        onDismiss()
                     }
+                }
+                if !viewModel.hasInvalidApiKey {
                     ToolbarItem(placement: .confirmationAction) {
                         submitButton
                     }
-                    #else
-                    ToolbarItem(placement: .cancellationAction) {
-                        Button(String(localized: Strings.cancelButton)) {
-                            dismiss()
-                            onDismiss()
-                        }
-                    }
-                    ToolbarItem(placement: .confirmationAction) {
-                        submitButton
-                    }
-                    #endif
                 }
-                .alert(String(localized: Strings.errorTitle), isPresented: $viewModel.showingError) {
-                    Button(String(localized: Strings.errorOK), role: .cancel) {}
-                } message: {
-                    Text(viewModel.errorMessage ?? String(localized: Strings.errorGeneric))
+            }
+            .alert(String(localized: Strings.errorTitle), isPresented: $viewModel.showingError) {
+                Button(String(localized: Strings.errorOK), role: .cancel) {}
+            } message: {
+                Text(viewModel.errorMessage ?? String(localized: Strings.errorGeneric))
+            }
+            .overlay {
+                if viewModel.isSubmitting {
+                    ProgressView()
+                        .padding()
+                        .background(.regularMaterial)
+                        .clipShape(.rect(cornerRadius: 12))
                 }
-                .overlay {
-                    if viewModel.isSubmitting {
-                        ProgressView()
-                            .padding()
-                            .background(.regularMaterial)
-                            .clipShape(.rect(cornerRadius: 12))
-                    }
+            }
+            .onAppear {
+                if SwiftlyFeedback.config.enableAutomaticViewTracking {
+                    SwiftlyFeedback.view(.submitFeedback)
                 }
-                .onAppear {
-                    if SwiftlyFeedback.config.enableAutomaticViewTracking {
-                        SwiftlyFeedback.view(.submitFeedback)
-                    }
-                }
-                #if os(macOS)
-                .frame(minWidth: 400, minHeight: 350)
-                #endif
+            }
+            #if os(macOS)
+            .frame(minWidth: 400, minHeight: 350)
+            #endif
         }
     }
 
@@ -249,6 +245,7 @@ final class SubmitFeedbackViewModel {
     var isSubmitted = false
     var showingError = false
     var errorMessage: String?
+    var hasInvalidApiKey = false
 
     var isValid: Bool {
         !title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty &&
@@ -257,6 +254,7 @@ final class SubmitFeedbackViewModel {
 
     func submit(using swiftlyFeedback: SwiftlyFeedback?) async {
         guard let sf = swiftlyFeedback, isValid else { return }
+        guard !hasInvalidApiKey else { return }
 
         isSubmitting = true
         defer { isSubmitting = false }
@@ -269,6 +267,8 @@ final class SubmitFeedbackViewModel {
                 email: email.isEmpty ? nil : email
             )
             isSubmitted = true
+        } catch let error as SwiftlyFeedbackError where error == .invalidApiKey {
+            hasInvalidApiKey = true
         } catch {
             errorMessage = error.localizedDescription
             showingError = true

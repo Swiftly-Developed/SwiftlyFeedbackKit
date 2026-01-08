@@ -1,9 +1,10 @@
 import Foundation
 
-public enum SwiftlyFeedbackError: Error, LocalizedError {
+public enum SwiftlyFeedbackError: Error, LocalizedError, Equatable {
     case invalidResponse
     case badRequest(message: String?)
     case unauthorized
+    case invalidApiKey
     case notFound
     case conflict
     case serverError(statusCode: Int)
@@ -18,6 +19,8 @@ public enum SwiftlyFeedbackError: Error, LocalizedError {
             return message ?? "Bad request"
         case .unauthorized:
             return "Invalid API key or unauthorized access"
+        case .invalidApiKey:
+            return String(localized: "error.invalidApiKey.message", bundle: .module)
         case .notFound:
             return "Resource not found"
         case .conflict:
@@ -28,6 +31,27 @@ public enum SwiftlyFeedbackError: Error, LocalizedError {
             return "Network error: \(error.localizedDescription)"
         case .decodingError(let error):
             return "Failed to decode response: \(error.localizedDescription)"
+        }
+    }
+
+    public static func == (lhs: SwiftlyFeedbackError, rhs: SwiftlyFeedbackError) -> Bool {
+        switch (lhs, rhs) {
+        case (.invalidResponse, .invalidResponse),
+             (.unauthorized, .unauthorized),
+             (.invalidApiKey, .invalidApiKey),
+             (.notFound, .notFound),
+             (.conflict, .conflict):
+            return true
+        case let (.badRequest(lhsMsg), .badRequest(rhsMsg)):
+            return lhsMsg == rhsMsg
+        case let (.serverError(lhsCode), .serverError(rhsCode)):
+            return lhsCode == rhsCode
+        case let (.networkError(lhsErr), .networkError(rhsErr)):
+            return lhsErr.localizedDescription == rhsErr.localizedDescription
+        case let (.decodingError(lhsErr), .decodingError(rhsErr)):
+            return lhsErr.localizedDescription == rhsErr.localizedDescription
+        default:
+            return false
         }
     }
 }
