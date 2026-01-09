@@ -77,7 +77,7 @@ struct SwiftlyFeedbackAdminApp: App {
 #if os(macOS)
 struct DeveloperCommands: Commands {
     var body: some Commands {
-        if AppEnvironment.isDeveloperMode {
+        if BuildEnvironment.canShowTestingFeatures {
             CommandGroup(after: .appSettings) {
                 Button("Developer Commands...") {
                     DeveloperCommandsWindowController.shared.showWindow()

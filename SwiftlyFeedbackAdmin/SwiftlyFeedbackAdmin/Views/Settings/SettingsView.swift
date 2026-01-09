@@ -96,7 +96,7 @@ struct SettingsView: View {
 
             // Developer Commands (DEBUG or TestFlight only, iOS only - macOS uses menu)
             #if os(iOS)
-            if AppEnvironment.isDeveloperMode, let projectViewModel = projectViewModel {
+            if BuildEnvironment.canShowTestingFeatures, let projectViewModel = projectViewModel {
                 developerSection(projectViewModel: projectViewModel)
             }
             #endif
@@ -416,7 +416,7 @@ struct SettingsView: View {
                 .fontWeight(.semibold)
                 .textCase(.uppercase)
         } footer: {
-            Text(AppEnvironment.isDebug ? "DEBUG build detected" : "TestFlight build detected")
+            Text(BuildEnvironment.isDebug ? "DEBUG build detected" : "TestFlight build detected")
         }
     }
     #endif
