@@ -9,13 +9,8 @@ actor AdminAPIClient {
     private let encoder: JSONEncoder
 
     private init() {
-        // Use current configuration
-        if let apiURL = URL(string: AppConfiguration.apiV1URL) {
-            self.baseURL = apiURL
-        } else {
-            // Fallback to localhost if URL construction fails
-            self.baseURL = URL(string: "http://localhost:8080/api/v1")!
-        }
+        // Fallback to localhost initially
+        self.baseURL = URL(string: "http://localhost:8080/api/v1")!
         self.session = URLSession.shared
 
         self.decoder = JSONDecoder()
@@ -25,16 +20,28 @@ actor AdminAPIClient {
         self.encoder = JSONEncoder()
         self.encoder.keyEncodingStrategy = .convertToSnakeCase
         self.encoder.dateEncodingStrategy = .iso8601
-
-        AppLogger.api.info("AdminAPIClient initialized with baseURL: \(self.baseURL.absoluteString)")
     }
 
     // Update base URL when server environment changes
-    func updateBaseURL() {
+    @MainActor
+    func updateBaseURL() async {
         if let apiURL = URL(string: AppConfiguration.apiV1URL) {
-            self.baseURL = apiURL
-            AppLogger.api.info("AdminAPIClient baseURL updated to: \(self.baseURL.absoluteString)")
+            await self.setBaseURL(apiURL)
+            AppLogger.api.info("AdminAPIClient baseURL updated to: \(apiURL.absoluteString)")
         }
+    }
+
+    // Initialize base URL from main actor context
+    @MainActor
+    func initializeBaseURL() async {
+        if let apiURL = URL(string: AppConfiguration.apiV1URL) {
+            await self.setBaseURL(apiURL)
+            AppLogger.api.info("AdminAPIClient initialized with baseURL: \(apiURL.absoluteString)")
+        }
+    }
+
+    private func setBaseURL(_ url: URL) {
+        self.baseURL = url
     }
 
     // Test connectivity to server (uses root /health endpoint, not /api/v1/health)
