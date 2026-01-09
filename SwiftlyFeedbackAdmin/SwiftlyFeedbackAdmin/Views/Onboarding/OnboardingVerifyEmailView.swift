@@ -366,5 +366,4 @@ struct OnboardingVerifyEmailView: View {
         userEmail: "user@example.com",
         onLogout: {}
     )
-    .previewDevice("iPad Pro (11-inch)")
 }

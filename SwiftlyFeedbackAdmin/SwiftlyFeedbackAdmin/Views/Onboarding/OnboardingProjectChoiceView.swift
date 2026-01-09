@@ -338,5 +338,4 @@ private struct ProjectChoiceCard: View {
         ),
         userName: "John"
     )
-    .previewDevice("iPad Pro (11-inch)")
 }

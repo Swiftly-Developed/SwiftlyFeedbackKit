@@ -329,5 +329,4 @@ private struct OnboardingFeatureCard: View {
         onContinue: {},
         onLogin: {}
     )
-    .previewDevice("iPad Pro (11-inch)")
 }

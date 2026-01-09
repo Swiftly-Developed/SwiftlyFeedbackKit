@@ -1,0 +1,20 @@
+# Swift build artifacts
+.build/
+.swiftpm/
+
+# Git
+.git/
+.gitignore
+
+# IDE
+.vscode/
+.idea/
+*.xcodeproj
+*.xcworkspace
+
+# macOS
+.DS_Store
+
+# Documentation
+*.md
+CLAUDE.md

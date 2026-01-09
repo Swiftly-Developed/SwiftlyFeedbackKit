@@ -378,5 +378,4 @@ private struct OnboardingInfoCard: View {
         ),
         onBack: {}
     )
-    .previewDevice("iPad Pro (11-inch)")
 }

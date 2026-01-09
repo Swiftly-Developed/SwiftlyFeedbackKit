@@ -1,6 +1,7 @@
 import Vapor
 import Fluent
 import FluentPostgresDriver
+import NIOSSL
 
 func configure(_ app: Application) async throws {
     // Configure JSON encoding/decoding to use snake_case
@@ -15,21 +16,53 @@ func configure(_ app: Application) async throws {
     ContentConfiguration.global.use(decoder: decoder, for: .json)
 
     // Database configuration - PostgreSQL
-    let hostname = Environment.get("DATABASE_HOST") ?? "localhost"
-    let port = Environment.get("DATABASE_PORT").flatMap(Int.init) ?? 5432
-    let username = Environment.get("DATABASE_USERNAME") ?? "postgres"
-    let password = Environment.get("DATABASE_PASSWORD") ?? "postgres"
-    let database = Environment.get("DATABASE_NAME") ?? "swiftly_feedback"
+    // Try to use DATABASE_URL first (Heroku standard), then fall back to individual vars
+    if let databaseURL = Environment.get("DATABASE_URL") {
+        // Parse DATABASE_URL (format: postgres://username:password@hostname:port/database)
+        guard let url = URL(string: databaseURL),
+              let host = url.host,
+              let user = url.user,
+              let pass = url.password,
+              let port = url.port else {
+            fatalError("Invalid DATABASE_URL format")
+        }
+        let dbName = String(url.path.dropFirst()) // Remove leading "/"
 
-    let config = SQLPostgresConfiguration(
-        hostname: hostname,
-        port: port,
-        username: username,
-        password: password,
-        database: database,
-        tls: .disable
-    )
-    app.databases.use(.postgres(configuration: config), as: .psql)
+        // Configure TLS for Heroku Postgres (requires SSL but without certificate verification)
+        var tlsConfig: TLSConfiguration = .makeClientConfiguration()
+        tlsConfig.certificateVerification = .none
+        let sslContext = try NIOSSLContext(configuration: tlsConfig)
+
+        let config = SQLPostgresConfiguration(
+            hostname: host,
+            port: port,
+            username: user,
+            password: pass,
+            database: dbName,
+            tls: .require(sslContext)
+        )
+
+        app.databases.use(.postgres(configuration: config), as: .psql)
+        app.logger.info("Using DATABASE_URL: \(host):\(port)/\(dbName)")
+    } else {
+        // Fall back to individual environment variables (for local development)
+        let hostname = Environment.get("DATABASE_HOST") ?? "localhost"
+        let port = Environment.get("DATABASE_PORT").flatMap(Int.init) ?? 5432
+        let username = Environment.get("DATABASE_USERNAME") ?? "postgres"
+        let password = Environment.get("DATABASE_PASSWORD") ?? "postgres"
+        let database = Environment.get("DATABASE_NAME") ?? "swiftly_feedback"
+
+        let config = SQLPostgresConfiguration(
+            hostname: hostname,
+            port: port,
+            username: username,
+            password: password,
+            database: database,
+            tls: .disable
+        )
+        app.databases.use(.postgres(configuration: config), as: .psql)
+        app.logger.info("Using individual DB vars: \(hostname):\(port)/\(database)")
+    }
 
     // Migrations - order matters!
     app.migrations.add(CreateUser())
