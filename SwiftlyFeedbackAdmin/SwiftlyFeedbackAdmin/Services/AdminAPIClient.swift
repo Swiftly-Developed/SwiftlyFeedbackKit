@@ -9,8 +9,13 @@ actor AdminAPIClient {
     private let encoder: JSONEncoder
 
     private init() {
-        // Use current server environment
-        self.baseURL = ServerEnvironment.current.baseURL
+        // Use current configuration
+        if let apiURL = URL(string: AppConfiguration.apiV1URL) {
+            self.baseURL = apiURL
+        } else {
+            // Fallback to localhost if URL construction fails
+            self.baseURL = URL(string: "http://localhost:8080/api/v1")!
+        }
         self.session = URLSession.shared
 
         self.decoder = JSONDecoder()
@@ -26,8 +31,10 @@ actor AdminAPIClient {
 
     // Update base URL when server environment changes
     func updateBaseURL() {
-        self.baseURL = ServerEnvironment.current.baseURL
-        AppLogger.api.info("AdminAPIClient baseURL updated to: \(self.baseURL.absoluteString)")
+        if let apiURL = URL(string: AppConfiguration.apiV1URL) {
+            self.baseURL = apiURL
+            AppLogger.api.info("AdminAPIClient baseURL updated to: \(self.baseURL.absoluteString)")
+        }
     }
 
     // Test connectivity to server (uses root /health endpoint, not /api/v1/health)
