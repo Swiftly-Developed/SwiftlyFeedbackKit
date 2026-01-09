@@ -27,8 +27,20 @@ func configure(_ app: Application) async throws {
         }
         let dbName = String(url.path.dropFirst()) // Remove leading "/"
 
-        // Use URL-based configuration (simpler and handles TLS automatically)
-        try app.databases.use(.postgres(url: databaseURL), as: .psql)
+        // Configure TLS for Heroku Postgres (requires SSL but without certificate verification)
+        var tlsConfig: TLSConfiguration = .makeClientConfiguration()
+        tlsConfig.certificateVerification = .none
+
+        let config = try SQLPostgresConfiguration(
+            hostname: host,
+            port: port,
+            username: user,
+            password: pass,
+            database: dbName,
+            tls: .require(tlsConfig)
+        )
+
+        app.databases.use(.postgres(configuration: config), as: .psql)
         app.logger.info("Using DATABASE_URL: \(host):\(port)/\(dbName)")
     } else {
         // Fall back to individual environment variables (for local development)
