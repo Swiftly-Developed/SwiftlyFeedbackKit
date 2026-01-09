@@ -342,6 +342,26 @@ struct SettingsView: View {
                 title: "Server",
                 value: "localhost:8080"
             )
+
+            Link(destination: URL(string: "https://swiftly-developed.com/feedbackkit-privacypolicy")!) {
+                SettingsRowView(
+                    icon: "hand.raised.fill",
+                    iconColor: .indigo,
+                    title: "Privacy Policy",
+                    showChevron: true
+                )
+            }
+            .buttonStyle(.plain)
+
+            Link(destination: URL(string: "https://swiftly-developed.com/feedback-kit-termsofservice")!) {
+                SettingsRowView(
+                    icon: "doc.text.fill",
+                    iconColor: .teal,
+                    title: "Terms of Service",
+                    showChevron: true
+                )
+            }
+            .buttonStyle(.plain)
         }
     }
 
