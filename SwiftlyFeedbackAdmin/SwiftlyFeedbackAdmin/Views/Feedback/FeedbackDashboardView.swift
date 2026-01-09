@@ -63,20 +63,38 @@ struct FeedbackDashboardView: View {
         ZStack(alignment: .bottom) {
             dashboardContent
                 .navigationTitle("Feedback")
+                #if os(iOS)
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbarBackground(.visible, for: .navigationBar)
+                #endif
                 .toolbar {
+                    #if os(iOS)
+                    // Top bar - left side: view mode picker
+                    ToolbarItem(placement: .topBarLeading) {
+                        viewModePicker
+                    }
+
+                    // Top bar - center: project picker
                     ToolbarItem(placement: .principal) {
                         projectPicker
                     }
 
-                    #if os(iOS)
-                    ToolbarItem(placement: .topBarLeading) {
-                        viewModePicker
+                    // Top bar - right side: filter menu
+                    ToolbarItem(placement: .topBarTrailing) {
+                        filterMenu
                     }
+
+                    // Bottom bar - iOS 26 Liquid Glass search (compact button that expands)
+                    DefaultToolbarItem(kind: .search, placement: .bottomBar)
+                    ToolbarSpacer(.flexible, placement: .bottomBar)
                     #else
+                    ToolbarItem(placement: .principal) {
+                        projectPicker
+                    }
+
                     ToolbarItem(placement: .automatic) {
                         viewModePicker
                     }
-                    #endif
 
                     ToolbarItem(placement: .automatic) {
                         feedbackCountIndicator
@@ -85,8 +103,14 @@ struct FeedbackDashboardView: View {
                     ToolbarItem(placement: .primaryAction) {
                         filterMenu
                     }
+                    #endif
                 }
-                .searchable(text: $feedbackViewModel.searchText, prompt: "Search feedback...")
+                #if os(iOS)
+                .searchable(text: $feedbackViewModel.searchText, placement: .automatic, prompt: "Search feedback...")
+                .searchToolbarBehavior(.minimize)
+                #else
+                .searchable(text: $feedbackViewModel.searchText, placement: .toolbar, prompt: "Search feedback...")
+                #endif
                 .task(id: selectedProject?.id) {
                     // Auto-select first project if none selected
                     if selectedProject == nil, let first = projectViewModel.projects.first {
@@ -521,13 +545,15 @@ struct FeedbackDashboardView: View {
                     )
                 }
             }
-            .padding()
+            .padding(.horizontal)
+            .padding(.bottom)
+            .padding(.top, 8)
         }
         .scrollIndicators(.visible)
         #if os(macOS)
         .background(Color(nsColor: .windowBackgroundColor))
         #else
-        .background(Color(.systemGroupedBackground).ignoresSafeArea())
+        .background(Color(.systemGroupedBackground))
         #endif
     }
 
