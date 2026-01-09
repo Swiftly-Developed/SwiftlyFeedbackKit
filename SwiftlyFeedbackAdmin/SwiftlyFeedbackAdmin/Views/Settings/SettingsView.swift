@@ -95,6 +95,9 @@ struct SettingsView: View {
             // About Section
             aboutSection
 
+            // Legal Section
+            legalSection
+
             // Developer Commands (DEBUG or TestFlight only, iOS only - macOS uses menu)
             #if os(iOS)
             if BuildEnvironment.canShowTestingFeatures, let projectViewModel = projectViewModel {
@@ -343,6 +346,33 @@ struct SettingsView: View {
                 title: "Server",
                 value: appConfiguration.baseURL
             )
+        }
+    }
+
+    // MARK: - Legal Section
+
+    @ViewBuilder
+    private var legalSection: some View {
+        Section("Legal") {
+            Link(destination: URL(string: "https://swiftly-developed.com/feedbackkit-privacy-policy")!) {
+                SettingsRowView(
+                    icon: "hand.raised.fill",
+                    iconColor: .blue,
+                    title: "Privacy Policy",
+                    showChevron: true
+                )
+            }
+            .buttonStyle(.plain)
+
+            Link(destination: URL(string: "https://swiftly-developed.com/feedbackkit-terms-of-service")!) {
+                SettingsRowView(
+                    icon: "doc.text.fill",
+                    iconColor: .green,
+                    title: "Terms of Service",
+                    showChevron: true
+                )
+            }
+            .buttonStyle(.plain)
         }
     }
 
