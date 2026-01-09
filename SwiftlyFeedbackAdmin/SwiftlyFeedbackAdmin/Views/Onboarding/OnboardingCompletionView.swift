@@ -431,5 +431,4 @@ private struct NextStepsSection: View {
         ),
         onComplete: {}
     )
-    .previewDevice("iPad Pro (11-inch)")
 }

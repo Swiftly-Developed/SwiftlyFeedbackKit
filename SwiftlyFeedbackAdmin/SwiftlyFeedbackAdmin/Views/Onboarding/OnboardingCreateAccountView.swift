@@ -490,5 +490,4 @@ private struct PasswordStrengthView: View {
         ),
         onBack: {}
     )
-    .previewDevice("iPad Pro (11-inch)")
 }

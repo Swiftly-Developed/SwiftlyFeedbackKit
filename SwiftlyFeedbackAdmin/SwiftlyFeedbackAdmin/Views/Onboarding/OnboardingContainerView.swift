@@ -214,5 +214,4 @@ private struct OnboardingProgressBar: View {
         authViewModel: AuthViewModel(),
         projectViewModel: ProjectViewModel()
     )
-    .previewDevice("iPad Pro (11-inch)")
 }
