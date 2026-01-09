@@ -1,6 +1,7 @@
 import Vapor
 import Fluent
 import FluentPostgresDriver
+import NIOSSL
 
 func configure(_ app: Application) async throws {
     // Configure JSON encoding/decoding to use snake_case
@@ -30,14 +31,15 @@ func configure(_ app: Application) async throws {
         // Configure TLS for Heroku Postgres (requires SSL but without certificate verification)
         var tlsConfig: TLSConfiguration = .makeClientConfiguration()
         tlsConfig.certificateVerification = .none
+        let sslContext = try NIOSSLContext(configuration: tlsConfig)
 
-        let config = try SQLPostgresConfiguration(
+        let config = SQLPostgresConfiguration(
             hostname: host,
             port: port,
             username: user,
             password: pass,
             database: dbName,
-            tls: .require(tlsConfig)
+            tls: .require(sslContext)
         )
 
         app.databases.use(.postgres(configuration: config), as: .psql)
