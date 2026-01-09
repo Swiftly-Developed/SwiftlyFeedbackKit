@@ -354,7 +354,7 @@ struct SettingsView: View {
     @ViewBuilder
     private var legalSection: some View {
         Section("Legal") {
-            Link(destination: URL(string: "https://swiftly-developed.com/feedbackkit-privacy-policy")!) {
+            Link(destination: URL(string: "https://swiftly-developed.com/feedbackkit-privacypolicy")!) {
                 SettingsRowView(
                     icon: "hand.raised.fill",
                     iconColor: .blue,
@@ -364,7 +364,7 @@ struct SettingsView: View {
             }
             .buttonStyle(.plain)
 
-            Link(destination: URL(string: "https://swiftly-developed.com/feedbackkit-terms-of-service")!) {
+            Link(destination: URL(string: "https://swiftly-developed.com/feedback-kit-termsofservice")!) {
                 SettingsRowView(
                     icon: "doc.text.fill",
                     iconColor: .green,
