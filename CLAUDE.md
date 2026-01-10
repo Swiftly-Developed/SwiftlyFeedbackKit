@@ -107,6 +107,7 @@ xcodebuild test -workspace Swiftlyfeedback.xcworkspace -scheme SwiftlyFeedbackAd
 - Archived projects: reads allowed, writes blocked
 - Voting blocked on `completed`/`rejected` status feedback
 - `FeedbackStatus.canVote` indicates votability
+- Feedback creators automatically get a vote (voteCount starts at 1)
 
 ## Feedback Statuses
 

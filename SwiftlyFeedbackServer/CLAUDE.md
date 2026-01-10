@@ -73,11 +73,13 @@ Sources/App/
 | Method | Path | Description |
 |--------|------|-------------|
 | GET | /feedbacks | List (?status=, ?category=) |
-| POST | /feedbacks | Submit (blocked if archived) |
+| POST | /feedbacks | Submit (blocked if archived, auto-votes for creator) |
 | GET | /feedbacks/:id | Details |
 | PATCH | /feedbacks/:id | Update (Bearer + access) |
 | DELETE | /feedbacks/:id | Delete (Bearer + Owner/Admin) |
 | POST | /feedbacks/merge | Merge items (Bearer + Owner/Admin) |
+
+**Note:** When feedback is created, the creator automatically gets a vote. The response returns `voteCount: 1` and `hasVoted: true`.
 
 ### Votes (X-API-Key auth)
 | Method | Path | Description |

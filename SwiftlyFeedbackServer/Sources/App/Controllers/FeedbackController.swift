@@ -159,6 +159,12 @@ struct FeedbackController: RouteCollection {
 
         try await feedback.save(on: req.db)
 
+        // Automatically add a vote from the feedback creator
+        let creatorVote = Vote(userId: dto.userId, feedbackId: feedback.id!)
+        try await creatorVote.save(on: req.db)
+        feedback.voteCount = 1
+        try await feedback.save(on: req.db)
+
         // Send email notification to project members who have feedback notifications enabled
         Task {
             do {
@@ -207,7 +213,7 @@ struct FeedbackController: RouteCollection {
             }
         }
 
-        return FeedbackResponseDTO(feedback: feedback)
+        return FeedbackResponseDTO(feedback: feedback, hasVoted: true)
     }
 
     @Sendable
