@@ -43,6 +43,66 @@ public final class SwiftlyFeedbackConfiguration: @unchecked Sendable {
     /// Show email field in submit feedback form. Default: `true`
     public var showEmailField: Bool = true
 
+    // MARK: - User Identity
+
+    /// The user's email address for vote notifications. Default: `nil`
+    ///
+    /// When set, this email is automatically used for vote notifications without showing
+    /// a dialog. The user will be subscribed to status change notifications based on
+    /// `voteNotificationDefaultOptIn`.
+    ///
+    /// Example:
+    /// ```swift
+    /// // Set user email once at configuration time
+    /// SwiftlyFeedback.config.userEmail = "user@example.com"
+    /// SwiftlyFeedback.config.voteNotificationDefaultOptIn = true
+    /// ```
+    public var userEmail: String? {
+        didSet {
+            if userEmail != oldValue {
+                onUserEmailChanged?(userEmail)
+            }
+        }
+    }
+
+    /// Callback invoked when `userEmail` changes from within the SDK.
+    ///
+    /// Use this to sync the email back to your app's settings when the user
+    /// provides their email through the vote dialog.
+    ///
+    /// Example:
+    /// ```swift
+    /// SwiftlyFeedback.config.onUserEmailChanged = { email in
+    ///     // Save to your app's settings/UserDefaults
+    ///     UserDefaults.standard.set(email ?? "", forKey: "userEmail")
+    /// }
+    /// ```
+    public var onUserEmailChanged: ((String?) -> Void)?
+
+    // MARK: - Voting Notifications
+
+    /// Show email field in vote dialog for status change notifications. Default: `true`
+    ///
+    /// When enabled and `userEmail` is not set, users will see a dialog when voting
+    /// that allows them to optionally provide an email address to receive notifications
+    /// when the feedback status changes.
+    ///
+    /// When `userEmail` is already configured, no dialog is shown regardless of this setting.
+    ///
+    /// Example:
+    /// ```swift
+    /// // Disable vote notification email field
+    /// SwiftlyFeedback.config.showVoteEmailField = false
+    /// ```
+    public var showVoteEmailField: Bool = true
+
+    /// Default opt-in state for vote status notifications. Default: `false`
+    ///
+    /// When `true`, vote status notifications are enabled by default.
+    /// - If `userEmail` is set, votes automatically include notification opt-in.
+    /// - If `userEmail` is not set and dialog is shown, the toggle starts enabled.
+    public var voteNotificationDefaultOptIn: Bool = false
+
     // MARK: - Permissions
 
     /// Allow users to submit new feedback. Default: `true`

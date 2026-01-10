@@ -237,6 +237,33 @@ SwiftlyFeedback.config.allowFeedbackSubmission = false
 SwiftlyFeedback.config.feedbackSubmissionDisabledMessage = "Upgrade to Pro to submit feedback"
 ```
 
+### Vote Notifications
+
+Let users receive email notifications when feedback they voted on changes status:
+
+```swift
+// Pre-set user email (votes use this automatically, no dialog shown)
+SwiftlyFeedback.config.userEmail = "user@example.com"
+
+// Show email dialog when voting (only shown if userEmail is nil)
+SwiftlyFeedback.config.showVoteEmailField = true  // default: true
+
+// Default opt-in state for the "notify me" toggle
+SwiftlyFeedback.config.voteNotificationDefaultOptIn = false  // default: false
+
+// Sync email back to your app when user enters it via vote dialog
+SwiftlyFeedback.config.onUserEmailChanged = { email in
+    UserDefaults.standard.set(email ?? "", forKey: "userEmail")
+}
+```
+
+**Behavior:**
+- If `userEmail` is set: Votes automatically use that email, no dialog shown
+- If `userEmail` is nil and `showVoteEmailField` is true: Users see a dialog to optionally enter email
+- If `userEmail` is nil and `showVoteEmailField` is false: Votes submitted without email
+
+Users who opt-in receive emails when feedback status changes (approved, in progress, completed, etc.) with a one-click unsubscribe link.
+
 ### Theming
 
 Customize colors to match your app:
@@ -355,6 +382,13 @@ let feedback = try await SwiftlyFeedback.shared?.submitFeedback(
 // Vote for feedback
 let result = try await SwiftlyFeedback.shared?.vote(for: feedbackId)
 print("New vote count: \(result.voteCount)")
+
+// Vote with email for status notifications
+let result = try await SwiftlyFeedback.shared?.vote(
+    for: feedbackId,
+    email: "user@example.com",
+    notifyStatusChange: true
+)
 
 // Remove vote (if allowUndoVote is enabled)
 let result = try await SwiftlyFeedback.shared?.unvote(for: feedbackId)

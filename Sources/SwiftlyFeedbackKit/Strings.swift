@@ -103,6 +103,40 @@ public enum Strings {
         String(localized: "button.voted", bundle: #bundle)
     }
 
+    // MARK: - Vote Dialog
+
+    public static var voteDialogTitle: String {
+        String(localized: "vote.dialog.title", bundle: #bundle)
+    }
+
+    public static var voteDialogEmailHeader: String {
+        String(localized: "vote.dialog.email.header", bundle: #bundle)
+    }
+
+    public static var voteDialogEmailPlaceholder: String {
+        String(localized: "vote.dialog.email.placeholder", bundle: #bundle)
+    }
+
+    public static var voteDialogEmailFooter: String {
+        String(localized: "vote.dialog.email.footer", bundle: #bundle)
+    }
+
+    public static var voteDialogNotifyToggle: String {
+        String(localized: "vote.dialog.notify.toggle", bundle: #bundle)
+    }
+
+    public static var voteDialogNotifyDescription: String {
+        String(localized: "vote.dialog.notify.description", bundle: #bundle)
+    }
+
+    public static var voteDialogSkip: String {
+        String(localized: "vote.dialog.skip", bundle: #bundle)
+    }
+
+    public static var voteDialogSubmit: String {
+        String(localized: "vote.dialog.submit", bundle: #bundle)
+    }
+
     // MARK: - Toolbar
 
     public static var toolbarRefresh: String {

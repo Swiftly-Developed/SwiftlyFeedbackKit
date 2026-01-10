@@ -307,12 +307,23 @@ public final class SwiftlyFeedback: @unchecked Sendable {
 
     // MARK: - Voting
 
-    /// Vote for a feedback item.
+    /// Vote for a feedback item with optional email for status notifications.
     ///
-    /// - Parameter feedbackId: The ID of the feedback to vote for
+    /// - Parameters:
+    ///   - feedbackId: The ID of the feedback to vote for
+    ///   - email: Optional email to receive status change notifications
+    ///   - notifyStatusChange: Whether to receive notifications when status changes (requires email)
     /// - Returns: Updated vote information
-    public func vote(for feedbackId: UUID) async throws -> VoteResult {
-        let body = VoteRequest(userId: userId)
+    public func vote(
+        for feedbackId: UUID,
+        email: String? = nil,
+        notifyStatusChange: Bool = false
+    ) async throws -> VoteResult {
+        let body = VoteRequest(
+            userId: userId,
+            email: email,
+            notifyStatusChange: email != nil ? notifyStatusChange : false
+        )
         return try await client.post(path: "feedbacks/\(feedbackId)/votes", body: body)
     }
 
@@ -321,7 +332,7 @@ public final class SwiftlyFeedback: @unchecked Sendable {
     /// - Parameter feedbackId: The ID of the feedback to unvote
     /// - Returns: Updated vote information
     public func unvote(for feedbackId: UUID) async throws -> VoteResult {
-        let body = VoteRequest(userId: userId)
+        let body = VoteRequest(userId: userId, email: nil, notifyStatusChange: nil)
         return try await client.delete(path: "feedbacks/\(feedbackId)/votes", body: body)
     }
 
@@ -400,6 +411,8 @@ private struct CreateFeedbackRequest: Encodable {
 
 private struct VoteRequest: Encodable {
     let userId: String
+    let email: String?
+    let notifyStatusChange: Bool?
 }
 
 private struct CreateCommentRequest: Encodable {

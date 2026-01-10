@@ -594,6 +594,94 @@
           }
         }
       }
+    },
+    "vote.dialog.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vote for this feedback"
+          }
+        }
+      }
+    },
+    "vote.dialog.email.header" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Email (optional)"
+          }
+        }
+      }
+    },
+    "vote.dialog.email.placeholder" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "your@email.com"
+          }
+        }
+      }
+    },
+    "vote.dialog.email.footer" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Provide your email to receive status updates for this feedback."
+          }
+        }
+      }
+    },
+    "vote.dialog.notify.toggle" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Notify me of status changes"
+          }
+        }
+      }
+    },
+    "vote.dialog.notify.description" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Get an email when this feedback is approved, in progress, or completed."
+          }
+        }
+      }
+    },
+    "vote.dialog.skip" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Skip"
+          }
+        }
+      }
+    },
+    "vote.dialog.submit" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vote"
+          }
+        }
+      }
     }
   },
   "version" : "1.0"

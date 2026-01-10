@@ -116,6 +116,9 @@ public struct FeedbackListView: View {
             } message: {
                 Text(viewModel.errorMessage ?? Strings.errorGeneric)
             }
+            .sheet(isPresented: $viewModel.showingVoteDialog) {
+                ListVoteDialogView(viewModel: viewModel)
+            }
         }
     }
 }
@@ -184,6 +187,198 @@ struct FeedbackListContentView: View {
     }
 }
 
+struct ListVoteDialogView: View {
+    @Bindable var viewModel: FeedbackListViewModel
+    @Environment(\.dismiss) private var dismiss
+    @Environment(\.colorScheme) private var colorScheme
+    #if os(iOS)
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    #endif
+
+    private var theme: SwiftlyFeedbackTheme { SwiftlyFeedback.theme }
+
+    private var hasValidEmail: Bool {
+        !viewModel.voteEmail.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
+    var body: some View {
+        #if os(macOS)
+        macOSContent
+        #else
+        iOSContent
+        #endif
+    }
+
+    // MARK: - iOS & iPadOS Content
+
+    #if !os(macOS)
+    private var iOSContent: some View {
+        NavigationStack {
+            Form {
+                emailSection
+                notificationSection
+            }
+            .navigationTitle(Strings.voteDialogTitle)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button(Strings.voteDialogSkip) {
+                        submitAndDismiss(email: nil, notify: false)
+                    }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button(Strings.voteDialogSubmit) {
+                        submitAndDismiss(
+                            email: viewModel.voteEmail,
+                            notify: viewModel.voteNotifyStatusChange
+                        )
+                    }
+                    .fontWeight(.semibold)
+                }
+            }
+            .tint(theme.primaryColor.resolve(for: colorScheme))
+        }
+        .presentationDetents(presentationDetentsForDevice)
+        .presentationDragIndicator(.visible)
+        .presentationCornerRadius(20)
+        .interactiveDismissDisabled(false)
+        .presentationSizing(.form)
+    }
+
+    private var presentationDetentsForDevice: Set<PresentationDetent> {
+        if horizontalSizeClass == .compact {
+            return [.height(320)]
+        } else {
+            return [.medium]
+        }
+    }
+    #endif
+
+    // MARK: - macOS Content
+
+    #if os(macOS)
+    private var macOSContent: some View {
+        VStack(spacing: 16) {
+            Text(Strings.voteDialogTitle)
+                .font(.headline)
+
+            VStack(alignment: .leading, spacing: 6) {
+                Text(Strings.voteDialogEmailHeader)
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+
+                TextField(Strings.voteDialogEmailPlaceholder, text: $viewModel.voteEmail)
+                    .textFieldStyle(.roundedBorder)
+                    .textContentType(.emailAddress)
+                    .autocorrectionDisabled()
+
+                Text(Strings.voteDialogEmailFooter)
+                    .font(.caption)
+                    .foregroundStyle(.tertiary)
+            }
+
+            VStack(alignment: .leading, spacing: 6) {
+                Toggle(isOn: $viewModel.voteNotifyStatusChange) {
+                    Text(Strings.voteDialogNotifyToggle)
+                }
+                .disabled(!hasValidEmail)
+                .onChange(of: viewModel.voteEmail) { _, newValue in
+                    if newValue.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                        viewModel.voteNotifyStatusChange = false
+                    }
+                }
+
+                Text(Strings.voteDialogNotifyDescription)
+                    .font(.caption)
+                    .foregroundStyle(.tertiary)
+            }
+
+            Spacer()
+
+            Divider()
+
+            HStack {
+                Button(Strings.voteDialogSkip) {
+                    submitAndDismiss(email: nil, notify: false)
+                }
+                .keyboardShortcut(.cancelAction)
+
+                Spacer()
+
+                Button(Strings.voteDialogSubmit) {
+                    submitAndDismiss(
+                        email: viewModel.voteEmail,
+                        notify: viewModel.voteNotifyStatusChange
+                    )
+                }
+                .keyboardShortcut(.defaultAction)
+                .buttonStyle(.borderedProminent)
+                .tint(theme.primaryColor.resolve(for: colorScheme))
+            }
+        }
+        .padding(20)
+        .frame(width: 380, height: 280)
+    }
+    #endif
+
+    // MARK: - Shared Sections
+
+    private var emailSection: some View {
+        Section {
+            TextField(Strings.voteDialogEmailPlaceholder, text: $viewModel.voteEmail)
+                .textContentType(.emailAddress)
+                #if !os(macOS)
+                .keyboardType(.emailAddress)
+                .textInputAutocapitalization(.never)
+                #endif
+                .autocorrectionDisabled()
+        } header: {
+            Text(Strings.voteDialogEmailHeader)
+        } footer: {
+            Text(Strings.voteDialogEmailFooter)
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+        }
+    }
+
+    private var notificationSection: some View {
+        Section {
+            Toggle(isOn: $viewModel.voteNotifyStatusChange) {
+                Text(Strings.voteDialogNotifyToggle)
+            }
+            .disabled(!hasValidEmail)
+            .onChange(of: viewModel.voteEmail) { _, newValue in
+                if newValue.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    viewModel.voteNotifyStatusChange = false
+                }
+            }
+        } footer: {
+            Text(Strings.voteDialogNotifyDescription)
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+        }
+    }
+
+    // MARK: - Actions
+
+    private func submitAndDismiss(email: String?, notify: Bool) {
+        dismiss()
+
+        // Save the email to config for future votes (if a valid email was provided)
+        let trimmedEmail = email?.trimmingCharacters(in: .whitespacesAndNewlines)
+        if let validEmail = trimmedEmail, !validEmail.isEmpty {
+            SwiftlyFeedback.config.userEmail = validEmail
+        }
+
+        guard let feedbackId = viewModel.pendingVoteFeedbackId else { return }
+        viewModel.pendingVoteFeedbackId = nil
+
+        Task {
+            await viewModel.submitVote(for: feedbackId, email: email, notify: notify)
+        }
+    }
+}
+
 /// Sort options for the feedback list
 public enum FeedbackSortOption: String, CaseIterable, Sendable {
     case votes = "Votes"
@@ -216,6 +411,12 @@ final class FeedbackListViewModel {
         didSet { sortFeedback() }
     }
 
+    // Vote dialog state
+    var showingVoteDialog = false
+    var voteEmail = ""
+    var voteNotifyStatusChange = false
+    var pendingVoteFeedbackId: UUID?
+
     let swiftlyFeedback: SwiftlyFeedback?
 
     private var loadTask: Task<Void, Never>?
@@ -223,6 +424,7 @@ final class FeedbackListViewModel {
 
     init(swiftlyFeedback: SwiftlyFeedback?) {
         self.swiftlyFeedback = swiftlyFeedback ?? SwiftlyFeedback.shared
+        self.voteNotifyStatusChange = SwiftlyFeedback.config.voteNotificationDefaultOptIn
     }
 
     func loadFeedback() async {
@@ -279,21 +481,52 @@ final class FeedbackListViewModel {
     }
 
     func toggleVote(for feedback: Feedback) async {
-        guard let sf = swiftlyFeedback else { return }
+        guard swiftlyFeedback != nil else { return }
         guard !hasInvalidApiKey else { return }
 
         let config = SwiftlyFeedback.config
 
-        // Check if undo vote is allowed
-        if feedback.hasVoted && !config.allowUndoVote {
-            return
+        if feedback.hasVoted {
+            // Unvoting - no dialog needed
+            if !config.allowUndoVote { return }
+            await submitVote(for: feedback.id, email: nil, notify: false)
+        } else {
+            // Check if userEmail is already configured
+            let configuredEmail = config.userEmail?.trimmingCharacters(in: .whitespacesAndNewlines)
+            let hasConfiguredEmail = configuredEmail?.isEmpty == false
+
+            if hasConfiguredEmail {
+                // Use configured email directly, no dialog needed
+                await submitVote(for: feedback.id, email: configuredEmail, notify: config.voteNotificationDefaultOptIn)
+            } else if config.showVoteEmailField {
+                // No configured email - show dialog to collect email
+                voteEmail = ""
+                voteNotifyStatusChange = config.voteNotificationDefaultOptIn
+                pendingVoteFeedbackId = feedback.id
+                showingVoteDialog = true
+            } else {
+                // No email configured and dialog disabled - vote without email
+                await submitVote(for: feedback.id, email: nil, notify: false)
+            }
         }
+    }
+
+    func submitVote(for feedbackId: UUID, email: String?, notify: Bool) async {
+        guard let sf = swiftlyFeedback else { return }
+        guard !hasInvalidApiKey else { return }
 
         do {
-            if feedback.hasVoted {
-                _ = try await sf.unvote(for: feedback.id)
+            // Check if this is an unvote by finding the feedback
+            if let feedback = feedbackItems.first(where: { $0.id == feedbackId }), feedback.hasVoted {
+                _ = try await sf.unvote(for: feedbackId)
             } else {
-                _ = try await sf.vote(for: feedback.id)
+                let trimmedEmail = email?.trimmingCharacters(in: .whitespacesAndNewlines)
+                let validEmail = (trimmedEmail?.isEmpty == false) ? trimmedEmail : nil
+                _ = try await sf.vote(
+                    for: feedbackId,
+                    email: validEmail,
+                    notifyStatusChange: notify && validEmail != nil
+                )
             }
             await loadFeedback()
         } catch let error as SwiftlyFeedbackError where error == .invalidApiKey {

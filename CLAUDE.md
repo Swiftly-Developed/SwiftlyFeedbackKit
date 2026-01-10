@@ -80,6 +80,11 @@ SwiftlyFeedback.config.feedbackSubmissionDisabledMessage = "Upgrade to Pro to su
 
 // Disable SDK logging to reduce console clutter
 SwiftlyFeedback.config.loggingEnabled = false
+
+// Vote email notifications (see Vote Notifications section below)
+SwiftlyFeedback.config.userEmail = "user@example.com"
+SwiftlyFeedback.config.showVoteEmailField = true
+SwiftlyFeedback.config.voteNotificationDefaultOptIn = false
 ```
 
 ## Code Patterns
@@ -161,6 +166,44 @@ The `FeedbackListView` includes built-in sorting and smooth animations:
 - `loadFeedbackIfNeeded()` prevents duplicate initial loads (used by `.task` modifier)
 - `loadFeedback()` always executes (used by `.refreshable` and filter changes)
 - Cancelled requests are silently ignored - no error alerts shown to users
+
+## Vote Notifications
+
+Users can optionally provide their email when voting to receive status change notifications.
+
+### Configuration Options
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `userEmail` | `nil` | Pre-configured email. If set, votes use it automatically (no dialog shown) |
+| `showVoteEmailField` | `true` | Show email dialog when voting (only if `userEmail` is nil) |
+| `voteNotificationDefaultOptIn` | `false` | Default state of "notify me" toggle |
+| `onUserEmailChanged` | `nil` | Callback when email is set via vote dialog |
+
+### Behavior
+
+1. **Email configured** (`userEmail` set): Votes automatically use the email, no dialog shown
+2. **No email + dialog enabled**: User sees dialog to optionally enter email when voting
+3. **No email + dialog disabled**: Vote submitted without email
+
+### Syncing Email from Vote Dialog
+
+When a user enters their email via the vote dialog, it's saved to `SwiftlyFeedback.config.userEmail`. To sync this back to your app's settings:
+
+```swift
+SwiftlyFeedback.config.onUserEmailChanged = { email in
+    // Save to UserDefaults or your settings system
+    UserDefaults.standard.set(email ?? "", forKey: "userEmail")
+}
+```
+
+### Vote Dialog UI
+
+The vote dialog is platform-specific following Apple HIG:
+- **iOS/iPadOS**: Sheet with Form, navigation bar buttons (Skip/Vote)
+- **macOS**: VStack layout with button bar (Skip left, Vote right)
+
+Both list view and detail view voting trigger the same dialog when email is not configured.
 
 ## Adding New Features
 
