@@ -138,10 +138,10 @@ public final class SwiftlyFeedback: @unchecked Sendable {
         #else
         if BuildEnvironment.isTestFlight {
             // TestFlight builds → staging
-            return URL(string: "https://feedbackkit-testflight-2e08ccf13bc4.herokuapp.com/api/v1")!
+            return URL(string: "https://api.feedbackkit.testflight.swiftly-developed.com/api/v1")!
         } else {
             // App Store builds → production
-            return URL(string: "https://feedbackkit-production-cbea7fa4b19d.herokuapp.com/api/v1")!
+            return URL(string: "https://api.feedbackkit.prod.swiftly-developed.com/api/v1")!
         }
         #endif
     }

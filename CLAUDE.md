@@ -245,9 +245,9 @@ The Admin app supports multiple server environments configured via `AppEnvironme
 | Environment | URL | Color | Available In |
 |-------------|-----|-------|--------------|
 | Localhost | `http://localhost:8080` | Purple | DEBUG only |
-| Development | `feedbackkit-dev-*.herokuapp.com` | Blue | DEBUG only |
-| TestFlight | `feedbackkit-testflight-*.herokuapp.com` | Orange | DEBUG, TestFlight builds |
-| Production | `feedbackkit-production-*.herokuapp.com` | Red | All builds |
+| Development | `api.feedbackkit.dev.swiftly-developed.com` | Blue | DEBUG only |
+| TestFlight | `api.feedbackkit.testflight.swiftly-developed.com` | Orange | DEBUG, TestFlight builds |
+| Production | `api.feedbackkit.prod.swiftly-developed.com` | Red | All builds |
 
 **Build type restrictions:**
 - **DEBUG**: All environments available, defaults to Development

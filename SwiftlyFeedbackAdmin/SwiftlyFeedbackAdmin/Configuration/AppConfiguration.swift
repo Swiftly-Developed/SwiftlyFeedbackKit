@@ -64,11 +64,11 @@ enum AppEnvironment: String, Codable, CaseIterable {
         case .localhost:
             return "http://localhost:8080"
         case .development:
-            return "https://feedbackkit-dev-3d08c4624108.herokuapp.com"
+            return "https://api.feedbackkit.dev.swiftly-developed.com"
         case .testflight:
-            return "https://feedbackkit-testflight-2e08ccf13bc4.herokuapp.com"
+            return "https://api.feedbackkit.testflight.swiftly-developed.com"
         case .production:
-            return "https://feedbackkit-production-cbea7fa4b19d.herokuapp.com"
+            return "https://api.feedbackkit.prod.swiftly-developed.com"
         }
     }
 

@@ -21,13 +21,13 @@ final class AppEnvironment: Sendable {
             switch appEnv.lowercased() {
             case "development":
                 self.type = .development
-                self.serverURL = "https://feedbackkit-dev-3d08c4624108.herokuapp.com"
+                self.serverURL = "https://api.feedbackkit.dev.swiftly-developed.com"
             case "staging":
                 self.type = .staging
-                self.serverURL = "https://feedbackkit-testflight-2e08ccf13bc4.herokuapp.com"
+                self.serverURL = "https://api.feedbackkit.testflight.swiftly-developed.com"
             case "production":
                 self.type = .production
-                self.serverURL = "https://feedbackkit-production-cbea7fa4b19d.herokuapp.com"
+                self.serverURL = "https://api.feedbackkit.prod.swiftly-developed.com"
             default:
                 self.type = .local
                 self.serverURL = "http://localhost:8080"
