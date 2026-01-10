@@ -20,8 +20,8 @@ struct DeveloperCenterView: View {
 
     // Server environment
     @State private var appConfiguration = AppConfiguration.shared
-    @State private var selectedEnvironment: AppEnvironment
     @State private var pendingEnvironment: AppEnvironment?
+    @State private var pendingEnvironmentName: String = ""  // Cached name for alert title
     @State private var showingEnvironmentChangeConfirmation = false
     @State private var isTestingConnection = false
     @State private var connectionTestResult: String?
@@ -32,7 +32,6 @@ struct DeveloperCenterView: View {
     init(projectViewModel: ProjectViewModel, isStandaloneWindow: Bool = false) {
         self.projectViewModel = projectViewModel
         self.isStandaloneWindow = isStandaloneWindow
-        self.selectedEnvironment = AppConfiguration.shared.environment
     }
 
     struct GenerationResult: Identifiable {
@@ -69,7 +68,7 @@ struct DeveloperCenterView: View {
                 }
 
                 // Data Retention Warning (non-production only)
-                if selectedEnvironment != .production {
+                if appConfiguration.environment != .production {
                     Section {
                         HStack(spacing: 12) {
                             Image(systemName: "clock.badge.exclamationmark.fill")
@@ -79,7 +78,7 @@ struct DeveloperCenterView: View {
                             VStack(alignment: .leading, spacing: 4) {
                                 Text("7-Day Data Retention")
                                     .font(.headline)
-                                Text("Feedback on \(selectedEnvironment.displayName) is automatically deleted after 7 days.")
+                                Text("Feedback on \(appConfiguration.environment.displayName) is automatically deleted after 7 days.")
                                     .font(.caption)
                                     .foregroundStyle(.secondary)
                             }
@@ -92,35 +91,38 @@ struct DeveloperCenterView: View {
                 Section {
                     // Environment picker (if switching is allowed)
                     if appConfiguration.canSwitchEnvironment {
-                        Picker("Server", selection: $selectedEnvironment) {
-                            ForEach(appConfiguration.availableEnvironments, id: \.self) { env in
+                        ForEach(appConfiguration.availableEnvironments, id: \.self) { env in
+                            Button {
+                                if env != appConfiguration.environment {
+                                    pendingEnvironment = env
+                                    pendingEnvironmentName = env.displayName
+                                    showingEnvironmentChangeConfirmation = true
+                                }
+                            } label: {
                                 HStack {
-                                    Text(env.displayName)
-                                    Spacer()
                                     Circle()
                                         .fill(env.color)
                                         .frame(width: 8, height: 8)
+                                    Text(env.displayName)
+                                    Spacer()
+                                    if env == appConfiguration.environment {
+                                        Image(systemName: "checkmark")
+                                            .foregroundStyle(.blue)
+                                    }
                                 }
-                                .tag(env)
+                                .contentShape(Rectangle())
                             }
-                        }
-                        .onChange(of: selectedEnvironment) { oldValue, newValue in
-                            guard oldValue != newValue else { return }
-                            // Revert the picker selection immediately
-                            selectedEnvironment = oldValue
-                            // Store the pending environment and show confirmation
-                            pendingEnvironment = newValue
-                            showingEnvironmentChangeConfirmation = true
+                            .buttonStyle(.plain)
                         }
                     } else {
                         // Show current environment (read-only)
                         HStack {
                             Label("Server", systemImage: "server.rack")
                             Spacer()
-                            Text(selectedEnvironment.displayName)
+                            Text(appConfiguration.environment.displayName)
                                 .foregroundStyle(.secondary)
                             Circle()
-                                .fill(selectedEnvironment.color)
+                                .fill(appConfiguration.environment.color)
                                 .frame(width: 8, height: 8)
                         }
                     }
@@ -140,7 +142,6 @@ struct DeveloperCenterView: View {
                     if appConfiguration.canSwitchEnvironment {
                         Button("Reset to Default") {
                             appConfiguration.resetToDefault()
-                            selectedEnvironment = appConfiguration.environment
                             Task {
                                 await AdminAPIClient.shared.updateBaseURL()
                                 await testConnection()
@@ -404,24 +405,21 @@ struct DeveloperCenterView: View {
             } message: {
                 Text("This will delete ALL your projects, feedback, comments, and reset all local state. You will be signed out. This cannot be undone.")
             }
-            .confirmationDialog(
-                "Switch Server Environment",
-                isPresented: $showingEnvironmentChangeConfirmation,
-                titleVisibility: .visible
+            .alert(
+                "Switch to \(pendingEnvironmentName)?",
+                isPresented: $showingEnvironmentChangeConfirmation
             ) {
-                if let pending = pendingEnvironment {
-                    Button("Switch to \(pending.displayName)", role: .destructive) {
+                Button("Switch", role: .destructive) {
+                    if let pending = pendingEnvironment {
                         changeEnvironment(to: pending)
-                        pendingEnvironment = nil
                     }
+                    pendingEnvironment = nil
                 }
                 Button("Cancel", role: .cancel) {
                     pendingEnvironment = nil
                 }
             } message: {
-                if let pending = pendingEnvironment {
-                    Text("Switching to \(pending.displayName) will sign you out. Auth tokens are environment-specific and cannot be transferred.")
-                }
+                Text("This will sign you out. Auth tokens are environment-specific and cannot be transferred.")
             }
             .task {
                 // Auto-select first project if available
@@ -786,7 +784,7 @@ struct DeveloperCenterView: View {
             Label("Feature Access", systemImage: "star.fill")
         } footer: {
             if subscriptionService.hasEnvironmentOverride {
-                Text("All features are unlocked in \(selectedEnvironment.displayName) environment for testing. Switch to Production to test paywall behavior.")
+                Text("All features are unlocked in \(appConfiguration.environment.displayName) environment for testing. Switch to Production to test paywall behavior.")
             } else {
                 Text("Production environment uses actual subscription tiers. Features require a valid subscription.")
             }
@@ -796,15 +794,16 @@ struct DeveloperCenterView: View {
     // MARK: - Server Environment Functions
 
     private func changeEnvironment(to newEnvironment: AppEnvironment) {
-        // Update the picker to reflect the new environment
-        selectedEnvironment = newEnvironment
         appConfiguration.switchTo(newEnvironment)
         connectionTestResult = nil
+
         Task {
             await AdminAPIClient.shared.updateBaseURL()
             AppLogger.api.info("Changed server environment to: \(newEnvironment.displayName)")
             AppLogger.api.info("AdminAPIClient now pointing to: \(newEnvironment.baseURL)")
-            // Note: The environmentDidChange notification triggers logout in RootView
+            // The environmentDidChange notification triggers logout in RootView
+            // Dismiss the Developer Center so the user sees the logout
+            dismiss()
         }
     }
 

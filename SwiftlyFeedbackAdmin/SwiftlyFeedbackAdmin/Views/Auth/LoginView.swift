@@ -10,7 +10,7 @@ struct LoginView: View {
     }
 
     @FocusState private var focusedField: LoginField?
-    @State private var selectedEnvironment = AppConfiguration.shared.environment
+    @State private var appConfiguration = AppConfiguration.shared
 
     var body: some View {
         VStack(spacing: 24) {
@@ -105,14 +105,13 @@ struct LoginView: View {
     @ViewBuilder
     private var environmentPicker: some View {
         Menu {
-            ForEach(AppEnvironment.availableEnvironments, id: \.self) { env in
+            ForEach(appConfiguration.availableEnvironments, id: \.self) { env in
                 Button {
-                    selectedEnvironment = env
-                    AppConfiguration.shared.switchTo(env)
+                    appConfiguration.switchTo(env)
                 } label: {
                     HStack {
                         Text(env.displayName)
-                        if env == selectedEnvironment {
+                        if env == appConfiguration.environment {
                             Image(systemName: "checkmark")
                         }
                     }
@@ -121,9 +120,9 @@ struct LoginView: View {
         } label: {
             HStack(spacing: 6) {
                 Circle()
-                    .fill(selectedEnvironment.color)
+                    .fill(appConfiguration.environment.color)
                     .frame(width: 8, height: 8)
-                Text(selectedEnvironment.displayName)
+                Text(appConfiguration.environment.displayName)
                     .font(.caption)
                 Image(systemName: "chevron.down")
                     .font(.caption2)
