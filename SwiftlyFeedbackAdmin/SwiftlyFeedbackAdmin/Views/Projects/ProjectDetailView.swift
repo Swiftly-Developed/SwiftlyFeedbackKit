@@ -68,7 +68,7 @@ struct ProjectDetailView: View {
                         }
 
                         Button {
-                            if subscriptionService.currentTier.meetsRequirement(.team) {
+                            if subscriptionService.meetsRequirement(.team) {
                                 showingMembersSheet = true
                             } else {
                                 paywallRequiredTier = .team
