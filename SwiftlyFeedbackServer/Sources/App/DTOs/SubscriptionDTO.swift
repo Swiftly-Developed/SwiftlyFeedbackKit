@@ -56,6 +56,12 @@ struct SyncSubscriptionDTO: Content {
     }
 }
 
+// MARK: - Override Tier Request (Dev/Testing only)
+
+struct OverrideSubscriptionTierDTO: Content {
+    let tier: SubscriptionTier
+}
+
 // MARK: - RevenueCat Webhook Payload
 
 struct RevenueCatWebhookPayload: Content {

@@ -79,3 +79,22 @@ struct ResetPasswordRequest: Encodable, Sendable {
     let code: String
     let newPassword: String
 }
+
+nonisolated
+struct OverrideSubscriptionTierRequest: Encodable, Sendable {
+    let tier: String
+}
+
+nonisolated
+struct SubscriptionInfoDTO: Decodable, Sendable {
+    let tier: SubscriptionTier
+    let status: String?
+    let productId: String?
+    let expiresAt: Date?
+
+    enum CodingKeys: String, CodingKey {
+        case tier, status
+        case productId = "product_id"
+        case expiresAt = "expires_at"
+    }
+}

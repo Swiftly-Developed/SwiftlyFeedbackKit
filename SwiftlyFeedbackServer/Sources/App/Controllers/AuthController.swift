@@ -23,6 +23,7 @@ struct AuthController: RouteCollection {
         // Subscription routes
         tokenProtected.get("subscription", use: getSubscription)
         tokenProtected.post("subscription", "sync", use: syncSubscription)
+        tokenProtected.patch("subscription", "tier", use: overrideSubscriptionTier)
     }
 
     @Sendable
@@ -424,6 +425,26 @@ struct AuthController: RouteCollection {
         try await user.save(on: req.db)
 
         // Return updated subscription info
+        return try await getSubscription(req: req)
+    }
+
+    /// Override subscription tier directly (non-production environments only)
+    /// PATCH /auth/subscription/tier
+    @Sendable
+    func overrideSubscriptionTier(req: Request) async throws -> SubscriptionInfoDTO {
+        // Only allow in non-production environments
+        guard !AppEnvironment.shared.isProduction else {
+            throw Abort(.forbidden, reason: "Subscription tier override is only available in non-production environments")
+        }
+
+        let user = try req.auth.require(User.self)
+        let dto = try req.content.decode(OverrideSubscriptionTierDTO.self)
+
+        user.subscriptionTier = dto.tier
+        user.subscriptionUpdatedAt = Date()
+
+        try await user.save(on: req.db)
+
         return try await getSubscription(req: req)
     }
 }

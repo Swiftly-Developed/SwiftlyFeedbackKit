@@ -28,6 +28,9 @@ struct DeveloperCenterView: View {
 
     // Subscription
     @State private var subscriptionService = SubscriptionService.shared
+    @State private var selectedPreviewTier: SubscriptionTier = .free
+    @State private var isSavingTier = false
+    @State private var tierSaveError: String?
 
     init(projectViewModel: ProjectViewModel, isStandaloneWindow: Bool = false) {
         self.projectViewModel = projectViewModel
@@ -746,49 +749,96 @@ struct DeveloperCenterView: View {
     @ViewBuilder
     private var featureAccessSection: some View {
         Section {
-            // Current subscription tier
-            HStack {
+            // Subscription tier picker
+            Picker(selection: $selectedPreviewTier) {
+                ForEach(SubscriptionTier.allCases, id: \.self) { tier in
+                    Text(tier.displayName).tag(tier)
+                }
+            } label: {
                 Label("Subscription Tier", systemImage: "crown.fill")
-                Spacer()
-                Text(subscriptionService.currentTier.displayName)
-                    .foregroundStyle(.secondary)
             }
 
-            // Effective tier (with override)
-            HStack {
-                Label("Effective Tier", systemImage: "sparkles")
-                Spacer()
-                HStack(spacing: 6) {
-                    Text(subscriptionService.effectiveTier.displayName)
-                        .foregroundStyle(.secondary)
-                    if subscriptionService.hasEnvironmentOverride {
-                        Text("DEV")
-                            .font(.caption2)
-                            .fontWeight(.semibold)
-                            .foregroundStyle(.white)
-                            .padding(.horizontal, 6)
-                            .padding(.vertical, 2)
-                            .background(.orange, in: Capsule())
+            // Features for selected tier
+            tierFeaturesView
+
+            // Save button
+            Button {
+                Task {
+                    await saveSubscriptionTier()
+                }
+            } label: {
+                HStack {
+                    Label("Save Tier Override", systemImage: "square.and.arrow.down")
+                    Spacer()
+                    if isSavingTier {
+                        ProgressView()
+                            .controlSize(.small)
                     }
                 }
             }
+            .disabled(isSavingTier || appConfiguration.environment == .production)
 
-            // Environment override status
-            HStack {
-                Label("All Features Unlocked", systemImage: "lock.open.fill")
-                Spacer()
-                Image(systemName: subscriptionService.hasEnvironmentOverride ? "checkmark.circle.fill" : "xmark.circle")
-                    .foregroundStyle(subscriptionService.hasEnvironmentOverride ? .green : .secondary)
+            // Error message if save failed
+            if let error = tierSaveError {
+                Text(error)
+                    .font(.caption)
+                    .foregroundStyle(.red)
             }
         } header: {
             Label("Feature Access", systemImage: "star.fill")
         } footer: {
-            if subscriptionService.hasEnvironmentOverride {
-                Text("All features are unlocked in \(appConfiguration.environment.displayName) environment for testing. Switch to Production to test paywall behavior.")
+            if appConfiguration.environment == .production {
+                Text("Tier override is disabled in Production. Switch to a non-production environment to test different subscription tiers.")
             } else {
-                Text("Production environment uses actual subscription tiers. Features require a valid subscription.")
+                Text("Save your selected tier to update your account's subscription level for testing purposes.")
             }
         }
+    }
+
+    @ViewBuilder
+    private var tierFeaturesView: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            TierFeatureRow(
+                text: selectedPreviewTier.maxProjects.map { "\($0) Project\($0 == 1 ? "" : "s")" } ?? "Unlimited Projects",
+                included: true
+            )
+            TierFeatureRow(
+                text: selectedPreviewTier.maxFeedbackPerProject.map { "\($0) Feedback per Project" } ?? "Unlimited Feedback",
+                included: true
+            )
+            TierFeatureRow(
+                text: "Invite Team Members",
+                included: selectedPreviewTier.canInviteMembers
+            )
+            TierFeatureRow(
+                text: "Integrations (Slack, GitHub, etc.)",
+                included: selectedPreviewTier.hasIntegrations
+            )
+            TierFeatureRow(
+                text: "Advanced Analytics & MRR",
+                included: selectedPreviewTier.hasAdvancedAnalytics
+            )
+            TierFeatureRow(
+                text: "Configurable Statuses",
+                included: selectedPreviewTier.hasConfigurableStatuses
+            )
+        }
+        .padding(.vertical, 8)
+    }
+
+    private func saveSubscriptionTier() async {
+        isSavingTier = true
+        tierSaveError = nil
+
+        do {
+            let result = try await AdminAPIClient.shared.overrideSubscriptionTier(selectedPreviewTier)
+            AppLogger.api.info("✅ Subscription tier overridden to: \(result.tier.displayName)")
+        } catch {
+            tierSaveError = error.localizedDescription
+            AppLogger.api.error("❌ Failed to override subscription tier: \(error.localizedDescription)")
+        }
+
+        isSavingTier = false
     }
 
     // MARK: - Server Environment Functions
@@ -827,6 +877,23 @@ struct DeveloperCenterView: View {
         }
 
         isTestingConnection = false
+    }
+}
+
+// MARK: - Tier Feature Row
+
+private struct TierFeatureRow: View {
+    let text: String
+    let included: Bool
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Image(systemName: included ? "checkmark.circle.fill" : "xmark.circle")
+                .foregroundStyle(included ? .green : .secondary)
+            Text(text)
+                .font(.subheadline)
+                .foregroundStyle(included ? .primary : .secondary)
+        }
     }
 }
 

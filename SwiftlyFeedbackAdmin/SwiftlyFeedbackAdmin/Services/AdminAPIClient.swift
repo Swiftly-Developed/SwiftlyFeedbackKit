@@ -633,6 +633,24 @@ actor AdminAPIClient {
         }
     }
 
+    func overrideSubscriptionTier(_ tier: SubscriptionTier) async throws -> SubscriptionInfoDTO {
+        let path = "auth/subscription/tier"
+        let body = OverrideSubscriptionTierRequest(tier: tier.rawValue)
+
+        AppLogger.api.info("🟠 PATCH \(path) (subscription tier override)")
+        let (data, response) = try await makeRequest(path: path, method: "PATCH", body: body, requiresAuth: true)
+        try validateResponse(response, data: data, path: path)
+
+        do {
+            let decoded = try decoder.decode(SubscriptionInfoDTO.self, from: data)
+            AppLogger.api.info("✅ PATCH \(path) - tier updated to: \(decoded.tier)")
+            return decoded
+        } catch {
+            AppLogger.api.error("❌ PATCH \(path) - failed: \(error.localizedDescription)")
+            throw APIError.decodingError(error)
+        }
+    }
+
     // MARK: - Project Slack Settings API
 
     func updateProjectSlackSettings(
