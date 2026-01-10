@@ -103,7 +103,7 @@ Your users can now browse existing feedback, submit new ideas, and vote on what 
 
 ### API Key Setup
 
-Get your API key from the [FeedbackKit Admin app](https://feedbackkit.app):
+Get your API key from the [FeedbackKit Admin app](https://swiftly-developed.com/feedbackkit):
 
 1. Create or select a project
 2. Go to **Project Settings → API Key**
@@ -578,7 +578,7 @@ Check out the [SwiftlyFeedbackDemoApp](../SwiftlyFeedbackDemoApp) for a complete
 
 ## Admin App
 
-Manage your feedback from the [FeedbackKit Admin app](https://feedbackkit.app):
+Manage your feedback from the [FeedbackKit Admin app](https://swiftly-developed.com/feedbackkit):
 
 - Review and respond to feedback
 - Update statuses
@@ -588,9 +588,9 @@ Manage your feedback from the [FeedbackKit Admin app](https://feedbackkit.app):
 
 ## Support
 
-- **Documentation:** [feedbackkit.app/docs](https://feedbackkit.app/docs)
+- **Documentation:** [swiftly-developed.com/feedbackkit](https://swiftly-developed.com/feedbackkit)
 - **Issues:** [GitHub Issues](https://github.com/Swiftly-Developed/SwiftlyFeedbackKit/issues)
-- **Email:** support@feedbackkit.app
+- **Email:** support@swiftly-developed.com
 
 ## License
 
