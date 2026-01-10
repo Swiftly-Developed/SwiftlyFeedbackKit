@@ -227,6 +227,7 @@ struct UsersDashboardView: View {
 
 struct UserStatsView: View {
     let stats: SDKUserStats
+    @State private var subscriptionService = SubscriptionService.shared
 
     #if os(macOS)
     private let columns = [
@@ -251,12 +252,14 @@ struct UserStatsView: View {
                 value: "\(stats.totalUsers)"
             )
 
-            UserStatCard(
-                icon: "dollarsign.circle.fill",
-                iconColor: .green,
-                title: "Total MRR",
-                value: stats.formattedTotalMRR
-            )
+            if subscriptionService.meetsRequirement(.pro) {
+                UserStatCard(
+                    icon: "dollarsign.circle.fill",
+                    iconColor: .green,
+                    title: "Total MRR",
+                    value: stats.formattedTotalMRR
+                )
+            }
 
             UserStatCard(
                 icon: "person.crop.circle.badge.checkmark",
@@ -265,12 +268,14 @@ struct UserStatsView: View {
                 value: "\(stats.usersWithMrr)"
             )
 
-            UserStatCard(
-                icon: "chart.bar.fill",
-                iconColor: .orange,
-                title: "Avg MRR",
-                value: stats.formattedAverageMRR
-            )
+            if subscriptionService.meetsRequirement(.pro) {
+                UserStatCard(
+                    icon: "chart.bar.fill",
+                    iconColor: .orange,
+                    title: "Avg MRR",
+                    value: stats.formattedAverageMRR
+                )
+            }
         }
         .padding(.vertical, 8)
     }
@@ -320,6 +325,7 @@ struct UserStatCard: View {
 
 struct UserDashboardRowView: View {
     let user: SDKUser
+    @State private var subscriptionService = SubscriptionService.shared
 
     private var formattedMRR: String {
         guard let mrr = user.mrr, mrr > 0 else { return "-" }
@@ -375,16 +381,18 @@ struct UserDashboardRowView: View {
 
             Spacer()
 
-            // MRR Badge
-            VStack(alignment: .trailing, spacing: 2) {
-                Text(formattedMRR)
-                    .font(.subheadline)
-                    .fontWeight(.semibold)
-                    .foregroundStyle(user.mrr ?? 0 > 0 ? .green : .secondary)
+            // MRR Badge (Pro tier only)
+            if subscriptionService.meetsRequirement(.pro) {
+                VStack(alignment: .trailing, spacing: 2) {
+                    Text(formattedMRR)
+                        .font(.subheadline)
+                        .fontWeight(.semibold)
+                        .foregroundStyle(user.mrr ?? 0 > 0 ? .green : .secondary)
 
-                Text("MRR")
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
+                    Text("MRR")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                }
             }
         }
         .padding(.vertical, 4)

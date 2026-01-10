@@ -80,84 +80,90 @@ struct ProjectDetailView: View {
                         }
 
                         Button {
-                            showingStatusSheet = true
+                            if subscriptionService.meetsRequirement(.pro) {
+                                showingStatusSheet = true
+                            } else {
+                                paywallRequiredTier = .pro
+                                showingPaywall = true
+                            }
                         } label: {
                             Label("Status Settings", systemImage: "list.bullet.clipboard")
+                                .tierBadge(.pro)
                         }
 
                         Divider()
 
                         Menu {
                             Button {
-                                if subscriptionService.currentTier.meetsRequirement(.team) {
+                                if subscriptionService.meetsRequirement(.pro) {
                                     showingSlackSheet = true
                                 } else {
-                                    paywallRequiredTier = .team
+                                    paywallRequiredTier = .pro
                                     showingPaywall = true
                                 }
                             } label: {
                                 Label("Slack", systemImage: "number")
-                                    .tierBadge(.team)
+                                    .tierBadge(.pro)
                             }
 
                             Button {
-                                if subscriptionService.currentTier.meetsRequirement(.team) {
+                                if subscriptionService.meetsRequirement(.pro) {
                                     showingGitHubSheet = true
                                 } else {
-                                    paywallRequiredTier = .team
+                                    paywallRequiredTier = .pro
                                     showingPaywall = true
                                 }
                             } label: {
                                 Label("GitHub", systemImage: "arrow.triangle.branch")
-                                    .tierBadge(.team)
+                                    .tierBadge(.pro)
                             }
 
                             Button {
-                                if subscriptionService.currentTier.meetsRequirement(.team) {
+                                if subscriptionService.meetsRequirement(.pro) {
                                     showingClickUpSheet = true
                                 } else {
-                                    paywallRequiredTier = .team
+                                    paywallRequiredTier = .pro
                                     showingPaywall = true
                                 }
                             } label: {
                                 Label("ClickUp", systemImage: "checklist")
-                                    .tierBadge(.team)
+                                    .tierBadge(.pro)
                             }
 
                             Button {
-                                if subscriptionService.currentTier.meetsRequirement(.team) {
+                                if subscriptionService.meetsRequirement(.pro) {
                                     showingNotionSheet = true
                                 } else {
-                                    paywallRequiredTier = .team
+                                    paywallRequiredTier = .pro
                                     showingPaywall = true
                                 }
                             } label: {
                                 Label("Notion", systemImage: "doc.text")
-                                    .tierBadge(.team)
+                                    .tierBadge(.pro)
                             }
 
                             Button {
-                                if subscriptionService.currentTier.meetsRequirement(.team) {
+                                if subscriptionService.meetsRequirement(.pro) {
                                     showingMondaySheet = true
                                 } else {
-                                    paywallRequiredTier = .team
+                                    paywallRequiredTier = .pro
                                     showingPaywall = true
                                 }
                             } label: {
                                 Label("Monday.com", systemImage: "calendar")
-                                    .tierBadge(.team)
+                                    .tierBadge(.pro)
                             }
 
                             Button {
-                                if subscriptionService.currentTier.meetsRequirement(.team) {
+                                if subscriptionService.meetsRequirement(.pro) {
                                     showingLinearSheet = true
                                 } else {
-                                    paywallRequiredTier = .team
+                                    paywallRequiredTier = .pro
                                     showingPaywall = true
                                 }
                             } label: {
                                 Label("Linear", systemImage: "arrow.triangle.branch")
-                                    .tierBadge(.team)
+                                    .tierBadge(.pro)
                             }
                         } label: {
                             Label("Integrations", systemImage: "puzzlepiece.extension")

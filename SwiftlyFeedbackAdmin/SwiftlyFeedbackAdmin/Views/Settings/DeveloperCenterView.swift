@@ -758,6 +758,19 @@ struct DeveloperCenterView: View {
                 Label("Subscription Tier", systemImage: "crown.fill")
             }
 
+            // Toggle to test actual tier gating (disable environment override)
+            Toggle(isOn: Binding(
+                get: { subscriptionService.disableEnvironmentOverrideForTesting },
+                set: { subscriptionService.disableEnvironmentOverrideForTesting = $0 }
+            )) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Label("Test Subscription Gating", systemImage: "lock.shield")
+                    Text("Disable \"All Features Unlocked\" to test actual tier restrictions")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
+
             // Features for selected tier
             tierFeaturesView
 

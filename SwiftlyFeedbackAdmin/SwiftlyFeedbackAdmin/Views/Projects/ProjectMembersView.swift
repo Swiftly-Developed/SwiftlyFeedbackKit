@@ -6,6 +6,8 @@ struct ProjectMembersView: View {
 
     @Environment(\.dismiss) private var dismiss
     @State private var showingAddMember = false
+    @State private var showingPaywall = false
+    @State private var subscriptionService = SubscriptionService.shared
 
     var body: some View {
         NavigationStack {
@@ -85,9 +87,14 @@ struct ProjectMembersView: View {
                 }
                 ToolbarItem(placement: .primaryAction) {
                     Button {
-                        showingAddMember = true
+                        if subscriptionService.meetsRequirement(.team) {
+                            showingAddMember = true
+                        } else {
+                            showingPaywall = true
+                        }
                     } label: {
                         Image(systemName: "plus")
+                            .tierBadge(.team)
                     }
                 }
             }
@@ -96,6 +103,9 @@ struct ProjectMembersView: View {
                     #if os(macOS)
                     .frame(minWidth: 400, minHeight: 350)
                     #endif
+            }
+            .sheet(isPresented: $showingPaywall) {
+                PaywallView(requiredTier: .team)
             }
             .task {
                 await viewModel.loadMembers(projectId: projectId)

@@ -30,11 +30,21 @@ struct FeedbackDashboardView: View {
     @AppStorage("dashboardViewMode") private var viewMode: DashboardViewMode = .kanban
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @State private var subscriptionService = SubscriptionService.shared
+    @State private var showingPaywall = false
 
     /// Uses the shared project filter from ProjectViewModel
     private var selectedProject: ProjectListItem? {
         get { projectViewModel.selectedFilterProject }
         nonmutating set { projectViewModel.selectedFilterProject = newValue }
+    }
+
+    /// Whether the Free tier user has reached their feedback limit
+    private var isAtFeedbackLimit: Bool {
+        guard subscriptionService.currentTier == .free,
+              let maxFeedback = subscriptionService.currentTier.maxFeedbackPerProject else {
+            return false
+        }
+        return feedbackViewModel.feedbacks.count >= maxFeedback
     }
 
     /// Shows feedback count for Free tier users (e.g., "5/10")
@@ -44,7 +54,7 @@ struct FeedbackDashboardView: View {
            let maxFeedback = subscriptionService.currentTier.maxFeedbackPerProject {
             Text("\(feedbackViewModel.feedbacks.count)/\(maxFeedback)")
                 .font(.caption)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(isAtFeedbackLimit ? .red : .secondary)
                 .padding(.horizontal, 8)
                 .padding(.vertical, 4)
                 .background(feedbackCountBackground, in: Capsule())
@@ -59,10 +69,46 @@ struct FeedbackDashboardView: View {
         #endif
     }
 
+    /// Warning banner shown when Free tier user reaches feedback limit
+    @ViewBuilder
+    private var feedbackLimitBanner: some View {
+        if isAtFeedbackLimit {
+            HStack(spacing: 12) {
+                Image(systemName: "exclamationmark.triangle.fill")
+                    .font(.title3)
+                    .foregroundStyle(.orange)
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Feedback Limit Reached")
+                        .font(.subheadline)
+                        .fontWeight(.semibold)
+                    Text("Upgrade to Pro for unlimited feedback")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+
+                Spacer()
+
+                Button("Upgrade") {
+                    showingPaywall = true
+                }
+                .buttonStyle(.borderedProminent)
+                .controlSize(.small)
+            }
+            .padding()
+            .background(Color.orange.opacity(0.1), in: RoundedRectangle(cornerRadius: 12))
+            .padding(.horizontal)
+            .padding(.top, 8)
+        }
+    }
+
     var body: some View {
         ZStack(alignment: .bottom) {
-            dashboardContent
-                .navigationTitle("Feedback")
+            VStack(spacing: 0) {
+                feedbackLimitBanner
+                dashboardContent
+            }
+            .navigationTitle("Feedback")
                 #if os(iOS)
                 .navigationBarTitleDisplayMode(.inline)
                 .toolbarBackground(.visible, for: .navigationBar)
@@ -147,6 +193,9 @@ struct FeedbackDashboardView: View {
         }
         .sheet(isPresented: $feedbackViewModel.showMergeSheet) {
             MergeFeedbackSheet(viewModel: feedbackViewModel)
+        }
+        .sheet(isPresented: $showingPaywall) {
+            PaywallView(requiredTier: .pro)
         }
         .navigationDestination(for: Feedback.self) { feedback in
             if let project = selectedProject {

@@ -1307,20 +1307,23 @@ struct FeedbackCategoryBadge: View {
 
 struct MrrBadge: View {
     let mrr: String
+    @State private var subscriptionService = SubscriptionService.shared
 
     var body: some View {
-        HStack(spacing: 3) {
-            Image(systemName: "dollarsign.circle.fill")
-                .font(.caption2)
-            Text(mrr)
-                .font(.caption2)
-                .fontWeight(.medium)
+        if subscriptionService.meetsRequirement(.pro), !mrr.isEmpty {
+            HStack(spacing: 3) {
+                Image(systemName: "dollarsign.circle.fill")
+                    .font(.caption2)
+                Text(mrr)
+                    .font(.caption2)
+                    .fontWeight(.medium)
+            }
+            .padding(.horizontal, 6)
+            .padding(.vertical, 3)
+            .background(Color.green.opacity(0.15))
+            .foregroundStyle(.green)
+            .clipShape(Capsule())
         }
-        .padding(.horizontal, 6)
-        .padding(.vertical, 3)
-        .background(Color.green.opacity(0.15))
-        .foregroundStyle(.green)
-        .clipShape(Capsule())
     }
 }
 

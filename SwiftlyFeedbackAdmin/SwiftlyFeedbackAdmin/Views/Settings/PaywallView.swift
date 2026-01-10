@@ -29,20 +29,49 @@ struct PaywallView: View {
     }
 
     /// Filter packages to show only relevant tiers based on the required tier
+    /// Returns packages sorted with Monthly first, then Yearly
     private func filteredPackages(from offering: Offering) -> [Package] {
-        offering.availablePackages.filter { package in
+        // Define exact product IDs for each tier
+        let proProductIds = [
+            SubscriptionService.ProductID.proMonthly.rawValue,
+            SubscriptionService.ProductID.proYearly.rawValue
+        ]
+        let teamProductIds = [
+            SubscriptionService.ProductID.teamMonthly.rawValue,
+            SubscriptionService.ProductID.teamYearly.rawValue
+        ]
+
+        // Debug: Log all available packages and required tier
+        print("🔍 PaywallView - Required tier: \(requiredTier)")
+        print("🔍 PaywallView - Pro product IDs: \(proProductIds)")
+        print("🔍 PaywallView - Team product IDs: \(teamProductIds)")
+        for package in offering.availablePackages {
+            print("🔍 PaywallView - Available package: \(package.storeProduct.productIdentifier) (type: \(package.packageType))")
+        }
+
+        let filtered = offering.availablePackages.filter { package in
             let productId = package.storeProduct.productIdentifier
+            let shouldInclude: Bool
             switch requiredTier {
             case .free:
                 // Free tier doesn't need paywall, but if shown, show all
-                return true
+                shouldInclude = true
             case .pro:
                 // For Pro requirement, show only Pro packages
-                return productId.contains(".pro.")
+                shouldInclude = proProductIds.contains(productId)
             case .team:
                 // For Team requirement, show only Team packages
-                return productId.contains(".team.")
+                shouldInclude = teamProductIds.contains(productId)
             }
+            print("🔍 PaywallView - Filter \(productId): \(shouldInclude ? "INCLUDE" : "EXCLUDE")")
+            return shouldInclude
+        }
+
+        print("🔍 PaywallView - Filtered packages count: \(filtered.count)")
+
+        // Sort: Monthly first, then Yearly
+        return filtered.sorted { pkg1, pkg2 in
+            pkg1.packageType == .monthly && pkg2.packageType != .monthly
         }
     }
 
@@ -246,6 +275,12 @@ struct PaywallView: View {
                 ) {
                     selectedPackage = package
                 }
+            }
+        }
+        .onAppear {
+            // Auto-select the first package (Monthly) if none selected
+            if selectedPackage == nil, let first = packages.first {
+                selectedPackage = first
             }
         }
     }

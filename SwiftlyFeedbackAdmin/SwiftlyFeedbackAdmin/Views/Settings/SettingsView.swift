@@ -262,14 +262,25 @@ struct SettingsView: View {
                 }
             }
 
+            // New Comments notification (Pro tier only - disabled for Free)
             Toggle(isOn: Binding(
-                get: { authViewModel.currentUser?.notifyNewComments ?? true },
+                get: {
+                    // Free tier: always OFF
+                    // Pro+: use actual setting
+                    if subscriptionService.meetsRequirement(.pro) {
+                        return authViewModel.currentUser?.notifyNewComments ?? true
+                    }
+                    return false
+                },
                 set: { newValue in
-                    Task {
-                        await authViewModel.updateNotificationSettings(
-                            notifyNewFeedback: nil,
-                            notifyNewComments: newValue
-                        )
+                    // Only allow changes for Pro+ users
+                    if subscriptionService.meetsRequirement(.pro) {
+                        Task {
+                            await authViewModel.updateNotificationSettings(
+                                notifyNewFeedback: nil,
+                                notifyNewComments: newValue
+                            )
+                        }
                     }
                 }
             )) {
@@ -281,13 +292,25 @@ struct SettingsView: View {
                         .background(.green, in: RoundedRectangle(cornerRadius: 6))
 
                     VStack(alignment: .leading, spacing: 2) {
-                        Text("New Comments")
+                        HStack(spacing: 6) {
+                            Text("New Comments")
+                            if !subscriptionService.meetsRequirement(.pro) {
+                                Text("Pro")
+                                    .font(.caption2)
+                                    .fontWeight(.semibold)
+                                    .foregroundStyle(.white)
+                                    .padding(.horizontal, 6)
+                                    .padding(.vertical, 2)
+                                    .background(.purple, in: Capsule())
+                            }
+                        }
                         Text("Receive email when comments are added")
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }
                 }
             }
+            .disabled(!subscriptionService.meetsRequirement(.pro))
         } header: {
             Text("Notifications")
         } footer: {

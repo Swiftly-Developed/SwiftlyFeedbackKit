@@ -49,7 +49,7 @@ enum SubscriptionTier: String, Codable, Sendable, CaseIterable {
 
     /// Whether the tier has access to integrations (Slack, GitHub, Email)
     var hasIntegrations: Bool {
-        self == .team
+        self != .free
     }
 
     /// Whether the tier has advanced analytics (MRR, detailed insights)
@@ -132,9 +132,23 @@ final class SubscriptionService: @unchecked Sendable {
 
     // MARK: - Environment Override
 
+    /// Key for persisting the override disable setting
+    private static let disableOverrideKey = "disableEnvironmentOverrideForTesting"
+
+    /// When true, disables the environment override so you can test actual tier gating
+    /// This is persisted in UserDefaults so it survives app restarts
+    var disableEnvironmentOverrideForTesting: Bool {
+        get { UserDefaults.standard.bool(forKey: Self.disableOverrideKey) }
+        set { UserDefaults.standard.set(newValue, forKey: Self.disableOverrideKey) }
+    }
+
     /// Whether the current environment grants free access to all features
     /// DEV, localhost, and TestFlight environments unlock all features for testing
+    /// Can be disabled via `disableEnvironmentOverrideForTesting` for testing gating behavior
     var hasEnvironmentOverride: Bool {
+        if disableEnvironmentOverrideForTesting {
+            return false
+        }
         let env = AppConfiguration.currentEnvironment
         return env == .localhost || env == .development || env == .testflight
     }
