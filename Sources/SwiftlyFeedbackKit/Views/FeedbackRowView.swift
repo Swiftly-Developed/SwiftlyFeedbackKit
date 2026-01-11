@@ -18,7 +18,7 @@ struct FeedbackCardView: View {
     }
 
     var body: some View {
-        HStack(alignment: .top, spacing: 12) {
+        HStack(alignment: .center, spacing: 12) {
             if config.showVoteCount {
                 VoteButton(
                     voteCount: feedback.voteCount,
@@ -64,7 +64,7 @@ struct FeedbackRowView: View {
     private var theme: SwiftlyFeedbackTheme { SwiftlyFeedback.theme }
 
     var body: some View {
-        HStack(alignment: .top, spacing: 12) {
+        HStack(alignment: .center, spacing: 12) {
             if config.showVoteCount {
                 VoteButton(
                     voteCount: feedback.voteCount,
@@ -129,14 +129,29 @@ struct VoteButton: View {
     private var config: SwiftlyFeedbackConfiguration { SwiftlyFeedback.config }
     private var theme: SwiftlyFeedbackTheme { SwiftlyFeedback.theme }
 
-    private var voteColor: Color {
+    private var themeColor: Color {
+        theme.primaryColor.resolve(for: colorScheme)
+    }
+
+    private var foregroundColor: Color {
         if !status.canVote {
             return .secondary.opacity(0.5)
         }
+        return themeColor
+    }
+
+    private var backgroundColor: Color {
         if hasVoted {
-            return theme.primaryColor.resolve(for: colorScheme)
+            return themeColor.opacity(0.15)
         }
-        return .secondary
+        return .clear
+    }
+
+    private var borderColor: Color {
+        if !status.canVote {
+            return .secondary.opacity(0.3)
+        }
+        return themeColor.opacity(0.5)
     }
 
     private var isDisabled: Bool {
@@ -147,13 +162,20 @@ struct VoteButton: View {
         Button(action: action) {
             VStack(spacing: 2) {
                 Image(systemName: hasVoted ? "arrowtriangle.up.fill" : "arrowtriangle.up")
-                    .font(.system(size: 16, weight: .bold))
+                    .font(.system(size: 14, weight: .bold))
                 Text(voteCount, format: .number)
-                    .font(.system(size: 14))
+                    .font(.system(size: 13))
                     .fontWeight(.medium)
             }
-            .foregroundStyle(voteColor)
-            .frame(width: 44)
+            .foregroundStyle(foregroundColor)
+            .frame(width: 44, height: 44)
+            .background(backgroundColor)
+            .clipShape(RoundedRectangle(cornerRadius: 8))
+            .overlay(
+                RoundedRectangle(cornerRadius: 8)
+                    .strokeBorder(borderColor, lineWidth: 1.5)
+            )
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .disabled(isDisabled)
