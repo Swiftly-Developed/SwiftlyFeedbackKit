@@ -44,7 +44,7 @@ final class AuthViewModel {
     func checkAuthState() {
         AppLogger.viewModel.info("🔄 Checking auth state...")
         Task {
-            if KeychainService.getToken() != nil {
+            if SecureStorageManager.shared.authToken != nil {
                 AppLogger.viewModel.info("🔑 Token found in keychain, fetching current user...")
                 do {
                     currentUser = try await AuthService.shared.getCurrentUser()
@@ -58,7 +58,7 @@ final class AuthViewModel {
                 } catch {
                     AppLogger.viewModel.error("❌ Failed to restore auth state: \(error.localizedDescription)")
                     // Token invalid or expired
-                    KeychainService.deleteToken()
+                    SecureStorageManager.shared.authToken = nil
                     isAuthenticated = false
                     AppLogger.viewModel.info("🔑 Invalid token deleted from keychain")
                 }

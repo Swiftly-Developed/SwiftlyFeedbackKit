@@ -18,7 +18,22 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func logoutOnTermination() {
-        guard KeychainService.getToken() != nil else { return }
+        // Check for token in a sync-safe way using KeychainManager directly
+        // Read environment from Keychain directly (avoids MainActor isolation issues during termination)
+        // Default to "development" for DEBUG builds, "production" for release builds
+        #if DEBUG
+        let defaultEnv = "development"
+        #else
+        let defaultEnv = "production"
+        #endif
+        let envKey: String
+        if let envData = KeychainManager.get(forKey: "global.selectedEnvironment"),
+           let storedEnv = String(data: envData, encoding: .utf8) {
+            envKey = storedEnv
+        } else {
+            envKey = defaultEnv
+        }
+        guard KeychainManager.get(forKey: "\(envKey).authToken") != nil else { return }
 
         // Try to invalidate token on server (best effort, synchronous)
         let semaphore = DispatchSemaphore(value: 0)
@@ -33,8 +48,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         // Wait briefly for the server call, but don't block termination too long
         _ = semaphore.wait(timeout: .now() + 1.0)
 
-        // Delete local token after server call
-        KeychainService.deleteToken()
+        // Delete local token after server call using KeychainManager directly
+        KeychainManager.delete(forKey: "\(envKey).authToken")
     }
 }
 #endif
@@ -48,6 +63,11 @@ struct SwiftlyFeedbackAdminApp: App {
     @State private var deepLinkManager = DeepLinkManager.shared
 
     init() {
+        #if DEBUG
+        // Initialize debug settings from secure storage (must be called before other services)
+        BuildEnvironment.initializeDebugSettings()
+        #endif
+
         // Configure subscription service at app launch
         SubscriptionService.shared.configure()
 

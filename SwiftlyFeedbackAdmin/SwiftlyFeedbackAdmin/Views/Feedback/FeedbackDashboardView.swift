@@ -27,10 +27,18 @@ struct FeedbackDashboardView: View {
     @Bindable var projectViewModel: ProjectViewModel
     @State private var feedbackViewModel = FeedbackViewModel()
     @State private var feedbackToOpen: Feedback?
-    @AppStorage("dashboardViewMode") private var viewMode: DashboardViewMode = .kanban
+    @SecureAppStorage(.dashboardViewMode) private var viewModeRaw: String = DashboardViewMode.kanban.rawValue
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @State private var subscriptionService = SubscriptionService.shared
     @State private var showingPaywall = false
+
+    private var viewMode: DashboardViewMode {
+        DashboardViewMode(rawValue: viewModeRaw) ?? .kanban
+    }
+
+    private func setViewMode(_ mode: DashboardViewMode) {
+        viewModeRaw = mode.rawValue
+    }
 
     /// Uses the shared project filter from ProjectViewModel
     private var selectedProject: ProjectListItem? {
@@ -372,7 +380,10 @@ struct FeedbackDashboardView: View {
     // MARK: - View Mode Picker
 
     private var viewModePicker: some View {
-        Picker("View Mode", selection: $viewMode) {
+        Picker("View Mode", selection: Binding(
+            get: { viewMode },
+            set: { setViewMode($0) }
+        )) {
             ForEach(DashboardViewMode.allCases, id: \.self) { mode in
                 Label(mode.label, systemImage: mode.icon)
                     .tag(mode)

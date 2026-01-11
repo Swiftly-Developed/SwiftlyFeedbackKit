@@ -19,7 +19,7 @@ actor AuthService {
             AppLogger.auth.info("✅ Signup successful for user: \(response.user.id)")
 
             // Save token
-            try KeychainService.saveToken(response.token)
+            await MainActor.run { SecureStorageManager.shared.authToken = response.token }
             AppLogger.auth.info("🔑 Token saved to keychain")
 
             return response
@@ -41,7 +41,7 @@ actor AuthService {
             AppLogger.auth.info("✅ Login successful for user: \(response.user.id), isEmailVerified: \(response.user.isEmailVerified)")
 
             // Save token
-            try KeychainService.saveToken(response.token)
+            await MainActor.run { SecureStorageManager.shared.authToken = response.token }
             AppLogger.auth.info("🔑 Token saved to keychain")
 
             return response
@@ -60,7 +60,7 @@ actor AuthService {
             AppLogger.auth.warning("⚠️ Server logout failed (will clear token anyway): \(error.localizedDescription)")
             // Even if server logout fails, clear local token
         }
-        KeychainService.deleteToken()
+        await MainActor.run { SecureStorageManager.shared.authToken = nil }
         AppLogger.auth.info("🔑 Token deleted from keychain")
     }
 
@@ -76,8 +76,8 @@ actor AuthService {
         }
     }
 
-    func isLoggedIn() -> Bool {
-        let hasToken = KeychainService.getToken() != nil
+    func isLoggedIn() async -> Bool {
+        let hasToken = await MainActor.run { SecureStorageManager.shared.authToken != nil }
         AppLogger.auth.debug("🔍 isLoggedIn check: \(hasToken)")
         return hasToken
     }
@@ -89,7 +89,7 @@ actor AuthService {
             try await AdminAPIClient.shared.put(path: "auth/password", body: request, requiresAuth: true)
             AppLogger.auth.info("✅ Password changed successfully")
             // Password changed successfully, token is invalidated - clear local token
-            KeychainService.deleteToken()
+            await MainActor.run { SecureStorageManager.shared.authToken = nil }
             AppLogger.auth.info("🔑 Token deleted from keychain after password change")
         } catch {
             AppLogger.auth.error("❌ Password change failed: \(error.localizedDescription)")
@@ -103,7 +103,7 @@ actor AuthService {
         do {
             try await AdminAPIClient.shared.delete(path: "auth/account", body: request, requiresAuth: true)
             AppLogger.auth.info("✅ Account deleted successfully")
-            KeychainService.deleteToken()
+            await MainActor.run { SecureStorageManager.shared.authToken = nil }
             AppLogger.auth.info("🔑 Token deleted from keychain after account deletion")
         } catch {
             AppLogger.auth.error("❌ Account deletion failed: \(error.localizedDescription)")

@@ -32,6 +32,11 @@ struct DeveloperCenterView: View {
     @State private var isSavingTier = false
     @State private var tierSaveError: String?
 
+    // Storage management
+    @State private var showClearEnvironmentConfirmation = false
+    @State private var showClearAllEnvironmentsConfirmation = false
+    @State private var showClearDebugConfirmation = false
+
     init(projectViewModel: ProjectViewModel, isStandaloneWindow: Bool = false) {
         self.projectViewModel = projectViewModel
         self.isStandaloneWindow = isStandaloneWindow
@@ -46,394 +51,401 @@ struct DeveloperCenterView: View {
 
     var body: some View {
         NavigationStack {
-            Form {
-                // Warning Banner
-                Section {
-                    HStack(spacing: 12) {
-                        Image(systemName: "hammer.fill")
-                            .font(.title2)
-                            .foregroundStyle(.orange)
+            formContent
+        }
+    }
 
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text("Developer Mode")
-                                .font(.headline)
-                            Text(BuildEnvironment.displayName)
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                        }
-
-                        Spacer()
-
-                        Image(systemName: "checkmark.seal.fill")
-                            .foregroundStyle(.green)
-                    }
-                    .padding(.vertical, 4)
-                }
-
-                // Data Retention Warning (non-production only)
-                if appConfiguration.environment != .production {
-                    Section {
-                        HStack(spacing: 12) {
-                            Image(systemName: "clock.badge.exclamationmark.fill")
-                                .font(.title2)
-                                .foregroundStyle(.orange)
-
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text("7-Day Data Retention")
-                                    .font(.headline)
-                                Text("Feedback on \(appConfiguration.environment.displayName) is automatically deleted after 7 days.")
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                            }
-                        }
-                        .padding(.vertical, 4)
-                    }
-                }
-
-                // Server Environment
-                Section {
-                    // Environment picker (if switching is allowed)
-                    if appConfiguration.canSwitchEnvironment {
-                        ForEach(appConfiguration.availableEnvironments, id: \.self) { env in
-                            Button {
-                                if env != appConfiguration.environment {
-                                    pendingEnvironment = env
-                                    pendingEnvironmentName = env.displayName
-                                    showingEnvironmentChangeConfirmation = true
-                                }
-                            } label: {
-                                HStack {
-                                    Circle()
-                                        .fill(env.color)
-                                        .frame(width: 8, height: 8)
-                                    Text(env.displayName)
-                                    Spacer()
-                                    if env == appConfiguration.environment {
-                                        Image(systemName: "checkmark")
-                                            .foregroundStyle(.blue)
-                                    }
-                                }
-                                .contentShape(Rectangle())
-                            }
-                            .buttonStyle(.plain)
-                        }
-                    } else {
-                        // Show current environment (read-only)
-                        HStack {
-                            Label("Server", systemImage: "server.rack")
-                            Spacer()
-                            Text(appConfiguration.environment.displayName)
-                                .foregroundStyle(.secondary)
-                            Circle()
-                                .fill(appConfiguration.environment.color)
-                                .frame(width: 8, height: 8)
-                        }
-                    }
-
-                    // Show current base URL
-                    HStack {
-                        Label("Base URL", systemImage: "link")
-                        Spacer()
-                        Text(appConfiguration.baseURL)
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                            .lineLimit(1)
-                            .truncationMode(.middle)
-                    }
-
-                    // Reset and test buttons (only if switching is allowed)
-                    if appConfiguration.canSwitchEnvironment {
-                        Button("Reset to Default") {
-                            appConfiguration.resetToDefault()
-                            Task {
-                                await AdminAPIClient.shared.updateBaseURL()
-                                await testConnection()
-                            }
-                        }
-                    }
-
-                    // Test connection button
-                    Button {
-                        Task {
-                            await testConnection()
-                        }
-                    } label: {
-                        HStack {
-                            Label("Test Connection", systemImage: "network")
-                            if isTestingConnection {
-                                Spacer()
-                                ProgressView()
-                                    .controlSize(.small)
-                            }
-                        }
-                    }
-                    .disabled(isTestingConnection || isGenerating)
-
-                    // Connection test result
-                    if let result = connectionTestResult {
-                        HStack {
-                            Image(systemName: result.contains("✅") ? "checkmark.circle.fill" : "xmark.circle.fill")
-                                .foregroundStyle(result.contains("✅") ? .green : .red)
-                            Text(result)
-                                .font(.caption)
-                        }
-                    }
-                } header: {
-                    Label("Server Environment", systemImage: "server.rack")
-                } footer: {
-                    if appConfiguration.canSwitchEnvironment {
-                        Text("Select the server environment. Localhost is for local backend testing.")
-                    } else {
-                        Text("Production builds automatically connect to the production server.")
-                    }
-                }
-
-                // Feature Access (only shown in non-production environments)
-                featureAccessSection
-
-                // Subscription Simulation (DEBUG only)
-                #if DEBUG
-                subscriptionSimulationSection
-                #endif
-
-                // Project Generation
-                Section {
-                    Stepper("Projects: \(projectCount)", value: $projectCount, in: 1...10)
-
-                    Button {
-                        Task {
-                            await generateProjects()
-                        }
-                    } label: {
-                        Label("Generate Dummy Projects", systemImage: "folder.badge.plus")
-                    }
-                    .disabled(isGenerating)
-                } header: {
-                    Text("Projects")
-                } footer: {
-                    Text("Creates \(projectCount) dummy project(s) with random names.")
-                }
-
-                // Feedback Generation
-                Section {
-                    if projectViewModel.projects.isEmpty {
-                        Text("No projects available")
-                            .foregroundStyle(.secondary)
-                    } else {
-                        Picker("Target Project", selection: $selectedProject) {
-                            Text("Select a project").tag(nil as ProjectListItem?)
-                            ForEach(projectViewModel.projects) { project in
-                                Text(project.name).tag(project as ProjectListItem?)
-                            }
-                        }
-
-                        Stepper("Feedback items: \(feedbackCount)", value: $feedbackCount, in: 1...50)
-
-                        Button {
-                            Task {
-                                await generateFeedback()
-                            }
-                        } label: {
-                            Label("Generate Dummy Feedback", systemImage: "plus.bubble")
-                        }
-                        .disabled(isGenerating || selectedProject == nil)
-                    }
-                } header: {
-                    Text("Feedback")
-                } footer: {
-                    Text("Creates \(feedbackCount) dummy feedback item(s) for the selected project.")
-                }
-
-                // Comment Generation
-                Section {
-                    Stepper("Comments per feedback: \(commentCount)", value: $commentCount, in: 1...20)
-
-                    Button {
-                        Task {
-                            await generateComments()
-                        }
-                    } label: {
-                        Label("Generate Dummy Comments", systemImage: "text.bubble")
-                    }
-                    .disabled(isGenerating || selectedProject == nil)
-                } header: {
-                    Text("Comments")
-                } footer: {
-                    Text("Adds \(commentCount) comment(s) to each feedback item in the selected project.")
-                }
-
-                // Resets Section
-                Section {
-                    // Onboarding Status
-                    HStack {
-                        Label("Onboarding", systemImage: "figure.walk.arrival")
-                        Spacer()
-                        Text(OnboardingManager.shared.hasCompletedOnboarding ? "Completed" : "Not Completed")
-                            .foregroundStyle(.secondary)
-                    }
-
-                    Button {
-                        resetOnboarding()
-                    } label: {
-                        Label("Reset Onboarding", systemImage: "arrow.counterclockwise")
-                    }
-                    .disabled(isGenerating || !OnboardingManager.shared.hasCompletedOnboarding)
-
-                    // Keychain Status
-                    HStack {
-                        Label("Auth Token", systemImage: "key.fill")
-                        Spacer()
-                        Text(KeychainService.getToken() != nil ? "Stored" : "None")
-                            .foregroundStyle(.secondary)
-                    }
-
-                    Button {
-                        clearAuthToken()
-                    } label: {
-                        Label("Clear Auth Token", systemImage: "key.slash")
-                    }
-                    .disabled(isGenerating || KeychainService.getToken() == nil)
-
-                    // UserDefaults
-                    Button {
-                        clearUserDefaults()
-                    } label: {
-                        Label("Clear UserDefaults", systemImage: "externaldrive.badge.minus")
-                    }
-                    .disabled(isGenerating)
-                } header: {
-                    Label("Resets", systemImage: "arrow.counterclockwise")
-                } footer: {
-                    Text("Reset local app state. Sign out may be required for changes to take effect.")
-                }
-
-                // Danger Zone - Data Deletion
-                Section {
-                    Button(role: .destructive) {
-                        Task {
-                            await clearAllFeedback()
-                        }
-                    } label: {
-                        Label("Clear Project Feedback", systemImage: "bubble.left.and.bubble.right")
-                    }
-                    .disabled(isGenerating || selectedProject == nil)
-
-                    Button(role: .destructive) {
-                        Task {
-                            await clearAllProjects()
-                        }
-                    } label: {
-                        Label("Delete All My Projects", systemImage: "folder.badge.minus")
-                    }
-                    .disabled(isGenerating || projectViewModel.projects.isEmpty)
-                } header: {
-                    Label("Data Deletion", systemImage: "trash")
-                        .foregroundStyle(.orange)
-                } footer: {
-                    Text("Delete server data. This affects the selected project or all your projects.")
-                }
-
-                // Full Reset Section (DEBUG only)
-                if BuildEnvironment.isDebug {
-                    Section {
-                        Button(role: .destructive) {
-                            showingFullResetConfirmation = true
-                        } label: {
-                            HStack {
-                                Label("Full Database Reset", systemImage: "exclamationmark.triangle.fill")
-                                Spacer()
-                                Image(systemName: "chevron.right")
-                                    .font(.caption)
-                                    .foregroundStyle(.tertiary)
-                            }
-                        }
-                        .disabled(isGenerating)
-                    } header: {
-                        Label("Danger Zone", systemImage: "exclamationmark.triangle.fill")
-                            .foregroundStyle(.red)
-                    } footer: {
-                        Text("Deletes ALL your data: projects, feedback, comments, and local state. You will be signed out.")
-                    }
-                }
-            }
-            .formStyle(.grouped)
-            .navigationTitle("Developer Center")
-            #if os(iOS)
-            .navigationBarTitleDisplayMode(.inline)
+    private var formContent: some View {
+        Form {
+            warningBannerSection
+            dataRetentionSection
+            serverEnvironmentSection
+            featureAccessSection
+            #if DEBUG
+            subscriptionSimulationSection
             #endif
-            .toolbar {
-                if !isStandaloneWindow {
-                    ToolbarItem(placement: .cancellationAction) {
-                        Button("Done") {
-                            dismiss()
-                        }
-                    }
+            storageManagementSection
+            projectGenerationSection
+            feedbackGenerationSection
+            commentGenerationSection
+            resetsSection
+            dataDeletionSection
+            #if DEBUG
+            dangerZoneSection
+            #endif
+        }
+        .formStyle(.grouped)
+        .navigationTitle("Developer Center")
+        #if os(iOS)
+        .navigationBarTitleDisplayMode(.inline)
+        #endif
+        .toolbar { toolbarContent }
+        .overlay { generatingOverlay }
+        .modifier(AlertsModifier(
+            showingResult: $showingResult,
+            generationResult: $generationResult,
+            showingFullResetConfirmation: $showingFullResetConfirmation,
+            showingEnvironmentChangeConfirmation: $showingEnvironmentChangeConfirmation,
+            showClearEnvironmentConfirmation: $showClearEnvironmentConfirmation,
+            showClearAllEnvironmentsConfirmation: $showClearAllEnvironmentsConfirmation,
+            showClearDebugConfirmation: $showClearDebugConfirmation,
+            pendingEnvironmentName: pendingEnvironmentName,
+            environmentDisplayName: appConfiguration.environment.displayName,
+            onFullReset: { Task { await performFullReset() } },
+            onEnvironmentSwitch: {
+                if let pending = pendingEnvironment {
+                    changeEnvironment(to: pending)
+                }
+                pendingEnvironment = nil
+            },
+            onCancelEnvironmentSwitch: { pendingEnvironment = nil },
+            onClearEnvironment: clearCurrentEnvironmentStorage,
+            onClearAllEnvironments: clearAllEnvironmentsStorage,
+            onClearDebugSettings: {
+                #if DEBUG
+                clearDebugSettings()
+                #endif
+            }
+        ))
+        .task {
+            if selectedProject == nil, let first = projectViewModel.projects.first {
+                selectedProject = first
+            }
+        }
+    }
+
+    @ToolbarContentBuilder
+    private var toolbarContent: some ToolbarContent {
+        if !isStandaloneWindow {
+            ToolbarItem(placement: .cancellationAction) {
+                Button("Done") {
+                    dismiss()
                 }
             }
-            .overlay {
-                if isGenerating {
-                    ZStack {
-                        Color.black.opacity(0.3)
-                            .ignoresSafeArea()
-                        VStack(spacing: 16) {
-                            ProgressView()
-                                .controlSize(.large)
-                            Text("Generating...")
-                                .font(.headline)
-                        }
-                        .padding(32)
-                        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16))
-                    }
+        }
+    }
+
+    // MARK: - Form Sections
+
+    @ViewBuilder
+    private var warningBannerSection: some View {
+        Section {
+            HStack(spacing: 12) {
+                Image(systemName: "hammer.fill")
+                    .font(.title2)
+                    .foregroundStyle(.orange)
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Developer Mode")
+                        .font(.headline)
+                    Text(BuildEnvironment.displayName)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
                 }
+
+                Spacer()
+
+                Image(systemName: "checkmark.seal.fill")
+                    .foregroundStyle(.green)
             }
-            .alert("Result", isPresented: $showingResult, presenting: generationResult) { _ in
-                Button("OK") {
-                    generationResult = nil
-                }
-            } message: { result in
-                VStack {
-                    Text(result.message)
-                    if !result.details.isEmpty {
-                        Text(result.details.joined(separator: "\n"))
+            .padding(.vertical, 4)
+        }
+    }
+
+    @ViewBuilder
+    private var dataRetentionSection: some View {
+        if appConfiguration.environment != .production {
+            Section {
+                HStack(spacing: 12) {
+                    Image(systemName: "clock.badge.exclamationmark.fill")
+                        .font(.title2)
+                        .foregroundStyle(.orange)
+
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("7-Day Data Retention")
+                            .font(.headline)
+                        Text("Feedback on \(appConfiguration.environment.displayName) is automatically deleted after 7 days.")
                             .font(.caption)
+                            .foregroundStyle(.secondary)
                     }
                 }
+                .padding(.vertical, 4)
             }
-            .confirmationDialog(
-                "Full Database Reset",
-                isPresented: $showingFullResetConfirmation,
-                titleVisibility: .visible
-            ) {
-                Button("Reset Everything", role: .destructive) {
+        }
+    }
+
+    @ViewBuilder
+    private var serverEnvironmentSection: some View {
+        Section {
+            if appConfiguration.canSwitchEnvironment {
+                ForEach(appConfiguration.availableEnvironments, id: \.self) { env in
+                    Button {
+                        if env != appConfiguration.environment {
+                            pendingEnvironment = env
+                            pendingEnvironmentName = env.displayName
+                            showingEnvironmentChangeConfirmation = true
+                        }
+                    } label: {
+                        HStack {
+                            Circle()
+                                .fill(env.color)
+                                .frame(width: 8, height: 8)
+                            Text(env.displayName)
+                            Spacer()
+                            if env == appConfiguration.environment {
+                                Image(systemName: "checkmark")
+                                    .foregroundStyle(.blue)
+                            }
+                        }
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                }
+            } else {
+                HStack {
+                    Label("Server", systemImage: "server.rack")
+                    Spacer()
+                    Text(appConfiguration.environment.displayName)
+                        .foregroundStyle(.secondary)
+                    Circle()
+                        .fill(appConfiguration.environment.color)
+                        .frame(width: 8, height: 8)
+                }
+            }
+
+            HStack {
+                Label("Base URL", systemImage: "link")
+                Spacer()
+                Text(appConfiguration.baseURL)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+            }
+
+            if appConfiguration.canSwitchEnvironment {
+                Button("Reset to Default") {
+                    appConfiguration.resetToDefault()
                     Task {
-                        await performFullReset()
+                        await AdminAPIClient.shared.updateBaseURL()
+                        await testConnection()
                     }
                 }
-                Button("Cancel", role: .cancel) {}
-            } message: {
-                Text("This will delete ALL your projects, feedback, comments, and reset all local state. You will be signed out. This cannot be undone.")
             }
-            .alert(
-                "Switch to \(pendingEnvironmentName)?",
-                isPresented: $showingEnvironmentChangeConfirmation
-            ) {
-                Button("Switch", role: .destructive) {
-                    if let pending = pendingEnvironment {
-                        changeEnvironment(to: pending)
+
+            Button {
+                Task {
+                    await testConnection()
+                }
+            } label: {
+                HStack {
+                    Label("Test Connection", systemImage: "network")
+                    if isTestingConnection {
+                        Spacer()
+                        ProgressView()
+                            .controlSize(.small)
                     }
-                    pendingEnvironment = nil
                 }
-                Button("Cancel", role: .cancel) {
-                    pendingEnvironment = nil
-                }
-            } message: {
-                Text("This will sign you out. Auth tokens are environment-specific and cannot be transferred.")
             }
-            .task {
-                // Auto-select first project if available
-                if selectedProject == nil, let first = projectViewModel.projects.first {
-                    selectedProject = first
+            .disabled(isTestingConnection || isGenerating)
+
+            if let result = connectionTestResult {
+                HStack {
+                    Image(systemName: result.contains("✅") ? "checkmark.circle.fill" : "xmark.circle.fill")
+                        .foregroundStyle(result.contains("✅") ? .green : .red)
+                    Text(result)
+                        .font(.caption)
                 }
+            }
+        } header: {
+            Label("Server Environment", systemImage: "server.rack")
+        } footer: {
+            if appConfiguration.canSwitchEnvironment {
+                Text("Select the server environment. Localhost is for local backend testing.")
+            } else {
+                Text("Production builds automatically connect to the production server.")
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var projectGenerationSection: some View {
+        Section {
+            Stepper("Projects: \(projectCount)", value: $projectCount, in: 1...10)
+
+            Button {
+                Task {
+                    await generateProjects()
+                }
+            } label: {
+                Label("Generate Dummy Projects", systemImage: "folder.badge.plus")
+            }
+            .disabled(isGenerating)
+        } header: {
+            Text("Projects")
+        } footer: {
+            Text("Creates \(projectCount) dummy project(s) with random names.")
+        }
+    }
+
+    @ViewBuilder
+    private var feedbackGenerationSection: some View {
+        Section {
+            if projectViewModel.projects.isEmpty {
+                Text("No projects available")
+                    .foregroundStyle(.secondary)
+            } else {
+                Picker("Target Project", selection: $selectedProject) {
+                    Text("Select a project").tag(nil as ProjectListItem?)
+                    ForEach(projectViewModel.projects) { project in
+                        Text(project.name).tag(project as ProjectListItem?)
+                    }
+                }
+
+                Stepper("Feedback items: \(feedbackCount)", value: $feedbackCount, in: 1...50)
+
+                Button {
+                    Task {
+                        await generateFeedback()
+                    }
+                } label: {
+                    Label("Generate Dummy Feedback", systemImage: "plus.bubble")
+                }
+                .disabled(isGenerating || selectedProject == nil)
+            }
+        } header: {
+            Text("Feedback")
+        } footer: {
+            Text("Creates \(feedbackCount) dummy feedback item(s) for the selected project.")
+        }
+    }
+
+    @ViewBuilder
+    private var commentGenerationSection: some View {
+        Section {
+            Stepper("Comments per feedback: \(commentCount)", value: $commentCount, in: 1...20)
+
+            Button {
+                Task {
+                    await generateComments()
+                }
+            } label: {
+                Label("Generate Dummy Comments", systemImage: "text.bubble")
+            }
+            .disabled(isGenerating || selectedProject == nil)
+        } header: {
+            Text("Comments")
+        } footer: {
+            Text("Adds \(commentCount) comment(s) to each feedback item in the selected project.")
+        }
+    }
+
+    @ViewBuilder
+    private var resetsSection: some View {
+        Section {
+            HStack {
+                Label("Onboarding", systemImage: "figure.walk.arrival")
+                Spacer()
+                Text(OnboardingManager.shared.hasCompletedOnboarding ? "Completed" : "Not Completed")
+                    .foregroundStyle(.secondary)
+            }
+
+            Button {
+                resetOnboarding()
+            } label: {
+                Label("Reset Onboarding", systemImage: "arrow.counterclockwise")
+            }
+            .disabled(isGenerating || !OnboardingManager.shared.hasCompletedOnboarding)
+
+            HStack {
+                Label("Auth Token", systemImage: "key.fill")
+                Spacer()
+                Text(SecureStorageManager.shared.authToken != nil ? "Stored" : "None")
+                    .foregroundStyle(.secondary)
+            }
+
+            Button {
+                clearAuthToken()
+            } label: {
+                Label("Clear Auth Token", systemImage: "key.slash")
+            }
+            .disabled(isGenerating || SecureStorageManager.shared.authToken == nil)
+        } header: {
+            Label("Resets", systemImage: "arrow.counterclockwise")
+        } footer: {
+            Text("Reset local app state for \(appConfiguration.environment.displayName). Sign out may be required for changes to take effect.")
+        }
+    }
+
+    @ViewBuilder
+    private var dataDeletionSection: some View {
+        Section {
+            Button(role: .destructive) {
+                Task {
+                    await clearAllFeedback()
+                }
+            } label: {
+                Label("Clear Project Feedback", systemImage: "bubble.left.and.bubble.right")
+            }
+            .disabled(isGenerating || selectedProject == nil)
+
+            Button(role: .destructive) {
+                Task {
+                    await clearAllProjects()
+                }
+            } label: {
+                Label("Delete All My Projects", systemImage: "folder.badge.minus")
+            }
+            .disabled(isGenerating || projectViewModel.projects.isEmpty)
+        } header: {
+            Label("Data Deletion", systemImage: "trash")
+                .foregroundStyle(.orange)
+        } footer: {
+            Text("Delete server data. This affects the selected project or all your projects.")
+        }
+    }
+
+    #if DEBUG
+    @ViewBuilder
+    private var dangerZoneSection: some View {
+        if BuildEnvironment.isDebug {
+            Section {
+                Button(role: .destructive) {
+                    showingFullResetConfirmation = true
+                } label: {
+                    HStack {
+                        Label("Full Database Reset", systemImage: "exclamationmark.triangle.fill")
+                        Spacer()
+                        Image(systemName: "chevron.right")
+                            .font(.caption)
+                            .foregroundStyle(.tertiary)
+                    }
+                }
+                .disabled(isGenerating)
+            } header: {
+                Label("Danger Zone", systemImage: "exclamationmark.triangle.fill")
+                    .foregroundStyle(.red)
+            } footer: {
+                Text("Deletes ALL your data: projects, feedback, comments, and local state. You will be signed out.")
+            }
+        }
+    }
+    #endif
+
+    @ViewBuilder
+    private var generatingOverlay: some View {
+        if isGenerating {
+            ZStack {
+                Color.black.opacity(0.3)
+                    .ignoresSafeArea()
+                VStack(spacing: 16) {
+                    ProgressView()
+                        .controlSize(.large)
+                    Text("Generating...")
+                        .font(.headline)
+                }
+                .padding(32)
+                .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16))
             }
         }
     }
@@ -668,29 +680,64 @@ struct DeveloperCenterView: View {
     }
 
     private func clearAuthToken() {
-        KeychainService.deleteToken()
+        SecureStorageManager.shared.authToken = nil
         generationResult = GenerationResult(
             success: true,
-            message: "Auth token cleared",
+            message: "Auth token cleared for \(appConfiguration.environment.displayName)",
             details: ["You will need to sign in again"]
         )
         showingResult = true
     }
 
-    private func clearUserDefaults() {
-        // Clear all UserDefaults for this app
-        if let bundleId = Bundle.main.bundleIdentifier {
-            UserDefaults.standard.removePersistentDomain(forName: bundleId)
-            UserDefaults.standard.synchronize()
-        }
+    // MARK: - Storage Management Actions
+
+    private func clearCurrentEnvironmentStorage() {
+        let env = appConfiguration.environment
+        SecureStorageManager.shared.clearEnvironment(env)
+
+        // Post notification so UI updates
+        NotificationCenter.default.post(name: .environmentDidChange, object: env)
 
         generationResult = GenerationResult(
             success: true,
-            message: "UserDefaults cleared",
-            details: ["All local preferences have been reset"]
+            message: "Cleared \(env.displayName) storage",
+            details: ["Auth token, onboarding state, and preferences have been reset"]
         )
         showingResult = true
     }
+
+    private func clearAllEnvironmentsStorage() {
+        for env in AppEnvironment.allCases {
+            SecureStorageManager.shared.clearEnvironment(env)
+        }
+
+        // Post notification for current environment
+        let currentEnv = appConfiguration.environment
+        NotificationCenter.default.post(name: .environmentDidChange, object: currentEnv)
+
+        generationResult = GenerationResult(
+            success: true,
+            message: "Cleared all environment storage",
+            details: ["Auth tokens and preferences for all environments have been reset"]
+        )
+        showingResult = true
+    }
+
+    #if DEBUG
+    private func clearDebugSettings() {
+        SecureStorageManager.shared.clearDebugSettings()
+
+        // Reset cached values
+        subscriptionService.clearSimulatedTier()
+
+        generationResult = GenerationResult(
+            success: true,
+            message: "Cleared debug settings",
+            details: ["Simulated subscription tier has been reset"]
+        )
+        showingResult = true
+    }
+    #endif
 
     private func performFullReset() async {
         isGenerating = true
@@ -709,19 +756,9 @@ struct DeveloperCenterView: View {
         }
         details.append("Deleted \(deletedProjects) project(s)")
 
-        // 2. Clear local state
-        OnboardingManager.shared.resetOnboarding()
-        details.append("Reset onboarding")
-
-        if let bundleId = Bundle.main.bundleIdentifier {
-            UserDefaults.standard.removePersistentDomain(forName: bundleId)
-            UserDefaults.standard.synchronize()
-        }
-        details.append("Cleared UserDefaults")
-
-        // 3. Clear auth token (this will trigger sign out)
-        KeychainService.deleteToken()
-        details.append("Cleared auth token")
+        // 2. Clear ALL secure storage (auth tokens, onboarding, preferences for all environments)
+        SecureStorageManager.shared.clearAll()
+        details.append("Cleared all secure storage")
 
         isGenerating = false
 
@@ -731,6 +768,9 @@ struct DeveloperCenterView: View {
             details: details + ["App will now sign out..."]
         )
         showingResult = true
+
+        // Post notification to trigger logout
+        NotificationCenter.default.post(name: .environmentDidChange, object: appConfiguration.environment)
 
         // Dismiss the window after a short delay to let user see the result
         try? await Task.sleep(for: .seconds(2))
@@ -853,6 +893,86 @@ struct DeveloperCenterView: View {
         }
     }
     #endif
+
+    // MARK: - Storage Management Section
+
+    @ViewBuilder
+    private var storageManagementSection: some View {
+        Section {
+            // View stored keys (expandable)
+            DisclosureGroup("View Stored Keys (\(SecureStorageManager.shared.listAllKeys().count))") {
+                storedKeysList
+            }
+
+            // Clear current environment
+            Button(role: .destructive) {
+                showClearEnvironmentConfirmation = true
+            } label: {
+                Label("Clear \(appConfiguration.environment.displayName) Data", systemImage: "trash")
+            }
+
+            // Clear all environments
+            Button(role: .destructive) {
+                showClearAllEnvironmentsConfirmation = true
+            } label: {
+                Label("Clear All Environment Data", systemImage: "trash.fill")
+            }
+
+            #if DEBUG
+            // Clear debug settings
+            Button(role: .destructive) {
+                showClearDebugConfirmation = true
+            } label: {
+                Label("Clear Debug Settings", systemImage: "ant")
+            }
+            #endif
+        } header: {
+            Label("Storage Management", systemImage: "externaldrive.fill")
+        } footer: {
+            Text("Manage stored data in the secure Keychain. Environment data includes auth tokens, onboarding state, and preferences.")
+        }
+    }
+
+    @ViewBuilder
+    private var storedKeysList: some View {
+        let keys = SecureStorageManager.shared.listAllKeys()
+
+        if keys.isEmpty {
+            Text("No stored keys")
+                .foregroundStyle(.secondary)
+        } else {
+            ForEach(keys.sorted(), id: \.self) { key in
+                HStack {
+                    Text(key)
+                        .font(.system(.caption, design: .monospaced))
+                    Spacer()
+                    scopeBadge(for: key)
+                }
+            }
+        }
+    }
+
+    private func scopeBadge(for key: String) -> some View {
+        let scope = key.components(separatedBy: ".").first ?? "unknown"
+
+        let color: Color = switch scope {
+        case "production": .red
+        case "testflight": .orange
+        case "development": .blue
+        case "localhost": .purple
+        case "global": .gray
+        case "debug": .yellow
+        default: .secondary
+        }
+
+        return Text(scope)
+            .font(.caption2)
+            .padding(.horizontal, 6)
+            .padding(.vertical, 2)
+            .background(color.opacity(0.2))
+            .foregroundStyle(color)
+            .clipShape(Capsule())
+    }
 
     @ViewBuilder
     private var tierFeaturesView: some View {
@@ -1072,6 +1192,95 @@ enum DummyDataGenerator {
         let userId = isAdmin ? "admin" : (userNames.randomElement() ?? "test_user")
 
         return (content, userId, isAdmin)
+    }
+}
+
+// MARK: - Alerts Modifier
+
+private struct AlertsModifier: ViewModifier {
+    @Binding var showingResult: Bool
+    @Binding var generationResult: DeveloperCenterView.GenerationResult?
+    @Binding var showingFullResetConfirmation: Bool
+    @Binding var showingEnvironmentChangeConfirmation: Bool
+    @Binding var showClearEnvironmentConfirmation: Bool
+    @Binding var showClearAllEnvironmentsConfirmation: Bool
+    @Binding var showClearDebugConfirmation: Bool
+
+    let pendingEnvironmentName: String
+    let environmentDisplayName: String
+    let onFullReset: () -> Void
+    let onEnvironmentSwitch: () -> Void
+    let onCancelEnvironmentSwitch: () -> Void
+    let onClearEnvironment: () -> Void
+    let onClearAllEnvironments: () -> Void
+    let onClearDebugSettings: () -> Void
+
+    func body(content: Content) -> some View {
+        content
+            .alert("Result", isPresented: $showingResult, presenting: generationResult) { _ in
+                Button("OK") {
+                    generationResult = nil
+                }
+            } message: { result in
+                VStack {
+                    Text(result.message)
+                    if !result.details.isEmpty {
+                        Text(result.details.joined(separator: "\n"))
+                            .font(.caption)
+                    }
+                }
+            }
+            .confirmationDialog(
+                "Full Database Reset",
+                isPresented: $showingFullResetConfirmation,
+                titleVisibility: .visible
+            ) {
+                Button("Reset Everything", role: .destructive, action: onFullReset)
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text("This will delete ALL your projects, feedback, comments, and reset all local state. You will be signed out. This cannot be undone.")
+            }
+            .alert(
+                "Switch to \(pendingEnvironmentName)?",
+                isPresented: $showingEnvironmentChangeConfirmation
+            ) {
+                Button("Switch", role: .destructive, action: onEnvironmentSwitch)
+                Button("Cancel", role: .cancel, action: onCancelEnvironmentSwitch)
+            } message: {
+                Text("This will sign you out. Auth tokens are environment-specific and cannot be transferred.")
+            }
+            .confirmationDialog(
+                "Clear \(environmentDisplayName) Storage?",
+                isPresented: $showClearEnvironmentConfirmation,
+                titleVisibility: .visible
+            ) {
+                Button("Clear \(environmentDisplayName) Data", role: .destructive, action: onClearEnvironment)
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text("This will clear all stored data for the \(environmentDisplayName) environment, including auth token, onboarding state, and preferences.")
+            }
+            .confirmationDialog(
+                "Clear All Environment Data?",
+                isPresented: $showClearAllEnvironmentsConfirmation,
+                titleVisibility: .visible
+            ) {
+                Button("Clear All Environments", role: .destructive, action: onClearAllEnvironments)
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text("This will clear stored data for ALL environments (localhost, development, testflight, production). Global and debug settings will be preserved.")
+            }
+            #if DEBUG
+            .confirmationDialog(
+                "Clear Debug Settings?",
+                isPresented: $showClearDebugConfirmation,
+                titleVisibility: .visible
+            ) {
+                Button("Clear Debug Settings", role: .destructive, action: onClearDebugSettings)
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text("This will reset all debug settings including simulated subscription tier and TestFlight simulation.")
+            }
+            #endif
     }
 }
 

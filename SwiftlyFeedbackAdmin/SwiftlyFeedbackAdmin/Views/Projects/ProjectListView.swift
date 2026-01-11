@@ -32,8 +32,16 @@ struct ProjectListView: View {
     @State private var showingAcceptInviteSheet = false
     @State private var showPaywall = false
     @State private var subscriptionService = SubscriptionService.shared
-    @AppStorage("projectViewMode") private var viewMode: ProjectViewMode = .list
+    @SecureAppStorage(.projectViewMode) private var viewModeRaw: String = ProjectViewMode.list.rawValue
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+
+    private var viewMode: ProjectViewMode {
+        ProjectViewMode(rawValue: viewModeRaw) ?? .list
+    }
+
+    private func setViewMode(_ mode: ProjectViewMode) {
+        viewModeRaw = mode.rawValue
+    }
 
     /// Number of projects owned by the current user
     private var ownedProjectCount: Int {
@@ -154,7 +162,10 @@ struct ProjectListView: View {
     // MARK: - View Mode Picker
 
     private var viewModePicker: some View {
-        Picker("View Mode", selection: $viewMode) {
+        Picker("View Mode", selection: Binding(
+            get: { viewMode },
+            set: { setViewMode($0) }
+        )) {
             ForEach(ProjectViewMode.allCases, id: \.self) { mode in
                 Label(mode.label, systemImage: mode.icon)
                     .tag(mode)

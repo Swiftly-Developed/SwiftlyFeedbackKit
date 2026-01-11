@@ -67,6 +67,9 @@ enum AppLogger {
 
     /// Subscription logging - RevenueCat, purchases, entitlements
     static let subscription = LoggerWrapper(category: "Subscription")
+
+    /// Storage logging - SecureStorageManager and migration operations
+    static let storage = LoggerWrapper(category: "Storage")
 }
 
 // MARK: - LoggerWrapper

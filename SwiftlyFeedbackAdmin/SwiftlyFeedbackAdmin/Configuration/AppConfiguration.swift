@@ -120,29 +120,31 @@ final class AppConfiguration {
     /// Shared singleton instance
     static let shared = AppConfiguration()
 
-    private let userDefaults: UserDefaults
-    private let environmentKey = "com.swiftlyfeedback.admin.environment"
-
-    /// Current environment setting
+    /// Current environment setting.
+    /// Changes are automatically persisted to secure storage.
     var environment: AppEnvironment {
         didSet {
+            guard oldValue != environment else { return }
+
             #if DEBUG
             // In DEBUG mode, allow changing environment and save it
-            userDefaults.set(environment.rawValue, forKey: environmentKey)
+            SecureStorageManager.shared.setEnvironment(environment)
+            AppLogger.storage.info("Environment changed: \(oldValue.rawValue) → \(environment.rawValue)")
             #else
             // In RELEASE mode (TestFlight or Production)
             if BuildEnvironment.isTestFlight {
                 // TestFlight: Allow testflight or production (for testing)
                 if !AppEnvironment.testFlightBuildEnvironments.contains(environment) {
-                    print("⚠️ \(environment.displayName) not allowed in TestFlight - switching to TestFlight")
+                    AppLogger.storage.warning("\(environment.displayName) not allowed in TestFlight - switching to TestFlight")
                     environment = .testflight
                 } else {
-                    userDefaults.set(environment.rawValue, forKey: environmentKey)
+                    SecureStorageManager.shared.setEnvironment(environment)
+                    AppLogger.storage.info("Environment changed: \(oldValue.rawValue) → \(environment.rawValue)")
                 }
             } else {
                 // Production (App Store): Lock to production only
                 if environment != .production {
-                    print("⚠️ Production builds must use Production environment")
+                    AppLogger.storage.warning("Production builds must use Production environment")
                     environment = .production
                 }
             }
@@ -195,17 +197,14 @@ final class AppConfiguration {
 
     // MARK: - Initialization
 
-    init(userDefaults: UserDefaults = .standard) {
-        self.userDefaults = userDefaults
+    private init() {
+        // Initialize from SecureStorageManager
+        // The storage manager handles default environment logic
+        let storedEnvironment = SecureStorageManager.shared.currentEnvironment
 
         #if DEBUG
-        // DEBUG mode: Load saved environment or default to development
-        if let savedEnv = userDefaults.string(forKey: environmentKey),
-           let env = AppEnvironment(rawValue: savedEnv) {
-            self.environment = env
-        } else {
-            self.environment = .development
-        }
+        // DEBUG mode: Use stored environment (defaults to development)
+        self.environment = storedEnvironment
 
         // Override with launch arguments for testing
         if CommandLine.arguments.contains("--localhost") {
@@ -220,11 +219,9 @@ final class AppConfiguration {
         #else
         // RELEASE mode: Behavior depends on build type
         if BuildEnvironment.isTestFlight {
-            // TestFlight build: Load saved testflight/production or default to testflight
-            if let savedEnv = userDefaults.string(forKey: environmentKey),
-               let env = AppEnvironment(rawValue: savedEnv),
-               AppEnvironment.testFlightBuildEnvironments.contains(env) {
-                self.environment = env
+            // TestFlight build: Use stored if valid, or default to testflight
+            if AppEnvironment.testFlightBuildEnvironments.contains(storedEnvironment) {
+                self.environment = storedEnvironment
             } else {
                 self.environment = .testflight
             }
@@ -235,10 +232,20 @@ final class AppConfiguration {
         #endif
 
         #if DEBUG
-        print("🔧 App Configuration Initialized")
-        print("📍 Environment: \(environment.displayName)")
-        print("🌐 Base URL: \(baseURL)")
+        AppLogger.storage.info("App Configuration Initialized")
+        AppLogger.storage.info("Environment: \(environment.displayName)")
+        AppLogger.storage.info("Base URL: \(baseURL)")
         #endif
+    }
+
+    /// Returns whether the current environment is a non-production environment.
+    var isNonProduction: Bool {
+        environment != .production
+    }
+
+    /// Returns whether the app has an auth token for the current environment.
+    var hasAuthToken: Bool {
+        SecureStorageManager.shared.authToken != nil
     }
 }
 
@@ -300,31 +307,50 @@ extension AppConfiguration {
 
 // MARK: - Environment Switching
 extension AppConfiguration {
-    /// Switch to a different environment
-    /// - Parameter environment: The target environment
-    /// - Parameter reconfigureSDK: Whether to reconfigure the SwiftlyFeedbackKit SDK (default: true)
+    /// Switch to a different environment.
+    ///
+    /// This method:
+    /// 1. Validates the environment is available for the current build type
+    /// 2. Updates the stored environment preference
+    /// 3. Posts an `.environmentDidChange` notification
+    /// 4. Does NOT clear auth tokens (they are environment-scoped automatically)
+    ///
+    /// - Parameters:
+    ///   - environment: The target environment
+    ///   - reconfigureSDK: Whether to reconfigure the SwiftlyFeedbackKit SDK (default: true)
     /// - Note: DEBUG allows all environments, TestFlight build allows testflight/production, Production is locked
     func switchTo(_ environment: AppEnvironment, reconfigureSDK: Bool = true) {
+        // Check if environment is available for current build type
+        guard environment.isAvailable else {
+            AppLogger.storage.warning("Environment \(environment.rawValue) not available in this build")
+            return
+        }
+
         let previousEnvironment = self.environment
+
+        guard previousEnvironment != environment else {
+            AppLogger.storage.debug("Already in \(environment.rawValue) environment")
+            return
+        }
 
         #if DEBUG
         self.environment = environment
-        print("🔄 Switched to \(environment.displayName) environment")
-        print("🌐 New Base URL: \(baseURL)")
+        AppLogger.storage.info("Switched to \(environment.displayName) environment")
+        AppLogger.storage.info("New Base URL: \(baseURL)")
         #else
         if BuildEnvironment.isTestFlight {
             // TestFlight build: Allow testflight or production only
             if AppEnvironment.testFlightBuildEnvironments.contains(environment) {
                 self.environment = environment
-                print("🔄 Switched to \(environment.displayName) environment")
-                print("🌐 New Base URL: \(baseURL)")
+                AppLogger.storage.info("Switched to \(environment.displayName) environment")
+                AppLogger.storage.info("New Base URL: \(baseURL)")
             } else {
-                print("⚠️ \(environment.displayName) not allowed in TestFlight build - using TestFlight")
+                AppLogger.storage.warning("\(environment.displayName) not allowed in TestFlight build - using TestFlight")
                 self.environment = .testflight
             }
         } else {
             // Production: Always lock to production
-            print("⚠️ Environment switching disabled in Production builds - locked to Production")
+            AppLogger.storage.warning("Environment switching disabled in Production builds - locked to Production")
             self.environment = .production
         }
         #endif
@@ -375,10 +401,10 @@ extension AppConfiguration {
         SwiftlyFeedback.theme.primaryColor = .color(Color.blue)
 
         #if DEBUG
-        print("📱 SwiftlyFeedbackKit SDK configured")
-        print("   Environment: \(environment.displayName)")
-        print("   API Key: \(apiKey.prefix(20))...")
-        print("   Base URL: \(sdkBaseURL)")
+        AppLogger.storage.info("SwiftlyFeedbackKit SDK configured")
+        AppLogger.storage.info("SDK Environment: \(environment.displayName)")
+        AppLogger.storage.debug("SDK API Key: \(apiKey.prefix(20))...")
+        AppLogger.storage.info("SDK Base URL: \(sdkBaseURL)")
         #endif
     }
 

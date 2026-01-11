@@ -53,19 +53,38 @@ enum BuildEnvironment {
 
     // MARK: - Simulation (Debug Only)
 
+    #if DEBUG
+    /// Cached value for TestFlight simulation (for non-MainActor access).
+    /// Updated when the property is set, and initialized from SecureStorageManager at launch.
+    nonisolated(unsafe) private static var _simulateTestFlight: Bool = false
+
+    /// Initialize debug settings from secure storage.
+    /// Call this at app launch from MainActor context.
+    @MainActor
+    static func initializeDebugSettings() {
+        _simulateTestFlight = SecureStorageManager.shared.get(.simulateTestFlight) ?? false
+        AppLogger.storage.debug("Debug settings initialized: simulateTestFlight=\(_simulateTestFlight)")
+    }
+    #endif
+
     /// Debug override to simulate TestFlight (for local testing)
-    /// Set this to true in Debug Settings to test TestFlight behavior
+    /// Set this to true in Debug Settings to test TestFlight behavior.
+    /// In DEBUG builds, uses SecureStorageManager with a cached value for non-MainActor access.
     static var simulateTestFlight: Bool {
         get {
             #if DEBUG
-            return UserDefaults.standard.bool(forKey: "debug.simulateTestFlight")
+            return _simulateTestFlight
             #else
             return false
             #endif
         }
         set {
             #if DEBUG
-            UserDefaults.standard.set(newValue, forKey: "debug.simulateTestFlight")
+            _simulateTestFlight = newValue
+            Task { @MainActor in
+                SecureStorageManager.shared.set(newValue, for: .simulateTestFlight)
+                AppLogger.storage.debug("TestFlight simulation: \(newValue)")
+            }
             #endif
         }
     }

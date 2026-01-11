@@ -88,7 +88,7 @@ actor AdminAPIClient {
         AppLogger.api.info("📤 Request: \(method) \(url.absoluteString)")
 
         if requiresAuth {
-            guard let token = KeychainService.getToken() else {
+            guard let token = await MainActor.run(body: { SecureStorageManager.shared.authToken }) else {
                 AppLogger.api.error("❌ No auth token found in keychain")
                 throw APIError.unauthorized
             }

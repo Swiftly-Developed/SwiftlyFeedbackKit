@@ -428,27 +428,30 @@ final class OnboardingViewModel {
 final class OnboardingManager {
     static let shared = OnboardingManager()
 
-    private let hasCompletedOnboardingKey = "hasCompletedOnboarding"
-
-    // Store as a tracked property so @Observable can detect changes
-    // (computed properties reading from UserDefaults are not tracked)
-    var hasCompletedOnboarding: Bool
+    /// Whether onboarding has been completed for the current environment.
+    /// This is environment-scoped, so each environment tracks completion independently.
+    var hasCompletedOnboarding: Bool {
+        get {
+            SecureStorageManager.shared.hasCompletedOnboarding
+        }
+        set {
+            SecureStorageManager.shared.hasCompletedOnboarding = newValue
+        }
+    }
 
     private init() {
-        // Initialize from UserDefaults
-        self.hasCompletedOnboarding = UserDefaults.standard.bool(forKey: hasCompletedOnboardingKey)
-        AppLogger.viewModel.info("OnboardingManager initialized - hasCompleted: \(self.hasCompletedOnboarding)")
+        AppLogger.storage.info("OnboardingManager initialized - hasCompleted: \(SecureStorageManager.shared.hasCompletedOnboarding) for environment: \(SecureStorageManager.shared.currentEnvironment.rawValue)")
     }
 
+    /// Marks onboarding as complete for the current environment.
     func completeOnboarding() {
         hasCompletedOnboarding = true
-        UserDefaults.standard.set(true, forKey: hasCompletedOnboardingKey)
-        AppLogger.viewModel.info("OnboardingManager: Onboarding marked as complete")
+        AppLogger.storage.info("Onboarding completed for environment: \(SecureStorageManager.shared.currentEnvironment.rawValue)")
     }
 
+    /// Resets onboarding for the current environment (Developer Center feature).
     func resetOnboarding() {
         hasCompletedOnboarding = false
-        UserDefaults.standard.set(false, forKey: hasCompletedOnboardingKey)
-        AppLogger.viewModel.info("OnboardingManager: Onboarding reset")
+        AppLogger.storage.info("Onboarding reset for environment: \(SecureStorageManager.shared.currentEnvironment.rawValue)")
     }
 }

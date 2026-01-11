@@ -48,8 +48,8 @@ struct RootView: View {
             guard let newEnvironment = notification.object as? AppEnvironment else { return }
             AppLogger.viewModel.info("🔄 Environment changed to \(newEnvironment.displayName) - logging out user")
 
-            // Clear auth token (environment-specific)
-            KeychainService.deleteToken()
+            // Clear auth token (environment-specific) - use SecureStorageManager
+            SecureStorageManager.shared.authToken = nil
 
             // Force logout to reset auth state
             authViewModel.forceLogout()

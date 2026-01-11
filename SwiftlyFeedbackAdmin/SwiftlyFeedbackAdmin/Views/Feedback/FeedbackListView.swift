@@ -26,8 +26,16 @@ enum FeedbackViewMode: String, CaseIterable {
 struct FeedbackListView: View {
     let project: Project
     @Bindable var viewModel: FeedbackViewModel
-    @AppStorage("feedbackViewMode") private var viewMode: FeedbackViewMode = .list
+    @SecureAppStorage(.feedbackViewMode) private var viewModeRaw: String = FeedbackViewMode.list.rawValue
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+
+    private var viewMode: FeedbackViewMode {
+        FeedbackViewMode(rawValue: viewModeRaw) ?? .list
+    }
+
+    private func setViewMode(_ mode: FeedbackViewMode) {
+        viewModeRaw = mode.rawValue
+    }
     @State private var selectedFeedbackId: UUID?
     @State private var feedbackToOpen: Feedback?
 
@@ -189,7 +197,10 @@ struct FeedbackListView: View {
     // MARK: - View Mode Picker
 
     private var viewModePicker: some View {
-        Picker("View Mode", selection: $viewMode) {
+        Picker("View Mode", selection: Binding(
+            get: { viewMode },
+            set: { setViewMode($0) }
+        )) {
             ForEach(FeedbackViewMode.allCases, id: \.self) { mode in
                 Label(mode.label, systemImage: mode.icon)
                     .tag(mode)

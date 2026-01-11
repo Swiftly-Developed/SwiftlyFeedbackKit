@@ -107,11 +107,11 @@ final class SubscriptionService: @unchecked Sendable {
     #if DEBUG
     /// DEBUG only: Simulated tier for testing specific tier behaviors
     /// Set via Developer Center. nil = use environment override or actual tier
-    private static let simulatedTierKey = "debug.simulatedSubscriptionTier"
+    /// Stored in SecureStorageManager with "debug" scope.
 
     /// Backing storage for simulatedTier - @Observable tracks this property
     private var _simulatedTier: SubscriptionTier? = {
-        guard let raw = UserDefaults.standard.string(forKey: simulatedTierKey) else { return nil }
+        guard let raw: String = SecureStorageManager.shared.get(.simulatedSubscriptionTier) else { return nil }
         return SubscriptionTier(rawValue: raw)
     }()
 
@@ -120,15 +120,17 @@ final class SubscriptionService: @unchecked Sendable {
         set {
             _simulatedTier = newValue
             if let tier = newValue {
-                UserDefaults.standard.set(tier.rawValue, forKey: Self.simulatedTierKey)
+                SecureStorageManager.shared.set(tier.rawValue, for: .simulatedSubscriptionTier)
             } else {
-                UserDefaults.standard.removeObject(forKey: Self.simulatedTierKey)
+                SecureStorageManager.shared.remove(.simulatedSubscriptionTier)
             }
+            AppLogger.storage.debug("Simulated tier set to: \(newValue?.rawValue ?? "nil")")
         }
     }
 
     func clearSimulatedTier() {
         simulatedTier = nil
+        AppLogger.storage.debug("Simulated tier cleared")
     }
     #endif
 
@@ -170,14 +172,14 @@ final class SubscriptionService: @unchecked Sendable {
 
     // MARK: - Environment Override
 
-    /// Key for persisting the override disable setting
-    private static let disableOverrideKey = "disableEnvironmentOverrideForTesting"
-
     /// When true, disables the environment override so you can test actual tier gating
-    /// This is persisted in UserDefaults so it survives app restarts
+    /// Stored in SecureStorageManager with "debug" scope.
     var disableEnvironmentOverrideForTesting: Bool {
-        get { UserDefaults.standard.bool(forKey: Self.disableOverrideKey) }
-        set { UserDefaults.standard.set(newValue, forKey: Self.disableOverrideKey) }
+        get { SecureStorageManager.shared.get(.disableEnvironmentOverride) ?? false }
+        set {
+            SecureStorageManager.shared.set(newValue, for: .disableEnvironmentOverride)
+            AppLogger.storage.debug("Environment override disabled: \(newValue)")
+        }
     }
 
     /// Whether the current environment grants free access to all features
