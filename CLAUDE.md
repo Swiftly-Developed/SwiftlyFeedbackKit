@@ -40,8 +40,9 @@ cd SwiftlyFeedbackServer && swift test
 cd SwiftlyFeedbackKit && swift build
 cd SwiftlyFeedbackKit && swift test
 
-# Admin app
+# Admin app (IMPORTANT: test on both iOS and macOS)
 xcodebuild -workspace Swiftlyfeedback.xcworkspace -scheme SwiftlyFeedbackAdmin -sdk iphonesimulator -configuration Debug
+xcodebuild -workspace Swiftlyfeedback.xcworkspace -scheme SwiftlyFeedbackAdmin -destination 'platform=macOS' -configuration Debug
 xcodebuild -workspace Swiftlyfeedback.xcworkspace -scheme SwiftlyFeedbackAdmin test -sdk iphonesimulator -destination 'platform=iOS Simulator,name=iPhone 16'
 
 # Demo app

@@ -66,8 +66,12 @@ struct OnboardingCreateAccountView: View {
 
                     // Password Strength Indicator
                     if !viewModel.signupPassword.isEmpty {
-                        PasswordStrengthView(password: viewModel.signupPassword)
-                            .padding(.horizontal, isCompactWidth ? 0 : 16)
+                        PasswordStrengthView(
+                            password: viewModel.signupPassword,
+                            showPasswordMatch: true,
+                            confirmPassword: viewModel.signupConfirmPassword
+                        )
+                        .padding(.horizontal, isCompactWidth ? 0 : 16)
                     }
 
                     Spacer(minLength: 16)
@@ -422,54 +426,6 @@ private struct ValidationMessage: View {
         .foregroundStyle(type == .error ? .red : .orange)
         .accessibilityElement(children: .combine)
         .accessibilityLabel("\(type == .error ? "Error" : "Warning"): \(text)")
-    }
-}
-
-private struct PasswordStrengthView: View {
-    let password: String
-
-    private var strength: (level: Int, text: String, color: Color) {
-        var score = 0
-
-        if password.count >= 8 { score += 1 }
-        if password.count >= 12 { score += 1 }
-        if password.contains(where: { $0.isUppercase }) { score += 1 }
-        if password.contains(where: { $0.isNumber }) { score += 1 }
-        if password.contains(where: { "!@#$%^&*()_+-=[]{}|;:,.<>?".contains($0) }) { score += 1 }
-
-        switch score {
-        case 0...1:
-            return (1, "Weak", .red)
-        case 2...3:
-            return (2, "Medium", .orange)
-        case 4:
-            return (3, "Strong", .green)
-        default:
-            return (4, "Very Strong", .green)
-        }
-    }
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack(spacing: 4) {
-                ForEach(0..<4, id: \.self) { index in
-                    RoundedRectangle(cornerRadius: 2)
-                        .fill(index < strength.level ? strength.color : Color.secondary.opacity(0.2))
-                        .frame(height: 4)
-                }
-            }
-
-            HStack {
-                Text("Password strength:")
-                    .foregroundStyle(.secondary)
-                Text(strength.text)
-                    .foregroundStyle(strength.color)
-                    .fontWeight(.medium)
-            }
-            .font(.caption)
-        }
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel("Password strength: \(strength.text)")
     }
 }
 

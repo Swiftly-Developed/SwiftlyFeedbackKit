@@ -124,7 +124,13 @@ struct ForgotPasswordView: View {
                 }
                 .submitLabel(.go)
 
-            passwordRequirements
+            if !viewModel.resetNewPassword.isEmpty {
+                PasswordStrengthView(
+                    password: viewModel.resetNewPassword,
+                    showPasswordMatch: true,
+                    confirmPassword: viewModel.resetConfirmPassword
+                )
+            }
 
             Button {
                 Task { await resetPassword() }
@@ -142,31 +148,6 @@ struct ForgotPasswordView: View {
             .disabled(viewModel.isLoading || !canSubmit)
 
             resendCodeButton
-        }
-    }
-
-    private var passwordRequirements: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            requirementRow(
-                met: viewModel.resetNewPassword.count >= 8,
-                text: "At least 8 characters"
-            )
-            requirementRow(
-                met: !viewModel.resetNewPassword.isEmpty && viewModel.resetNewPassword == viewModel.resetConfirmPassword,
-                text: "Passwords match"
-            )
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-    }
-
-    private func requirementRow(met: Bool, text: String) -> some View {
-        HStack(spacing: 6) {
-            Image(systemName: met ? "checkmark.circle.fill" : "circle")
-                .foregroundStyle(met ? .green : .secondary)
-                .font(.caption)
-            Text(text)
-                .font(.caption)
-                .foregroundStyle(met ? .primary : .secondary)
         }
     }
 

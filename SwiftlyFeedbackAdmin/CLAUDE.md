@@ -4,8 +4,16 @@ Admin application for managing feedback projects and members.
 
 ## Build & Test
 
+**IMPORTANT:** Always test builds on both iOS and macOS to catch platform-specific issues.
+
 ```bash
+# iOS build
 xcodebuild -workspace ../Swiftlyfeedback.xcworkspace -scheme SwiftlyFeedbackAdmin -sdk iphonesimulator -configuration Debug
+
+# macOS build
+xcodebuild -workspace ../Swiftlyfeedback.xcworkspace -scheme SwiftlyFeedbackAdmin -destination 'platform=macOS' -configuration Debug
+
+# iOS tests
 xcodebuild -workspace ../Swiftlyfeedback.xcworkspace -scheme SwiftlyFeedbackAdmin test -sdk iphonesimulator -destination 'platform=iOS Simulator,name=iPhone 16'
 ```
 
@@ -20,6 +28,7 @@ SwiftlyFeedbackAdmin/
 │   ├── RootView.swift, MainTabView.swift
 │   ├── Home/         # HomeDashboardView
 │   ├── Auth/         # Login, Signup, EmailVerification, ForgotPassword
+│   ├── Components/   # Shared UI components (PasswordStrengthView)
 │   ├── Onboarding/   # Welcome, CreateAccount, VerifyEmail, ProjectChoice, CreateProject, JoinProject, Completion
 │   ├── Projects/     # List, Detail, Create, Members, Slack/GitHub/ClickUp/Notion/Monday/Linear settings
 │   ├── Feedback/     # Dashboard (List/Kanban), Detail, MergeSheet
@@ -36,6 +45,12 @@ SwiftlyFeedbackAdmin/
 1. Login/Signup → 2. Email verification (8-char code) → 3. Token stored via `SecureStorageManager`
 
 **Password Reset:** Forgot Password → Enter email → Enter code + new password → All sessions invalidated
+
+**Password Validation UI:** All password fields (Signup, Onboarding, Password Reset) use `PasswordStrengthView` component:
+- 4-bar visual strength indicator (Weak/Medium/Strong/Very Strong)
+- Color-coded feedback (red → orange → green)
+- Optional "Passwords match" indicator
+- Scoring: length (8+, 12+), uppercase, numbers, special characters
 
 ### Onboarding (New Users)
 1. Welcome → 2. Create Account → 3. Verify Email → 4. Project Choice → 5. Create/Join Project → 6. Completion

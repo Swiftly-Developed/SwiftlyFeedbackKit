@@ -64,10 +64,13 @@ struct SignupView: View {
                     }
                     .submitLabel(.go)
 
-                Text("Password must be at least 8 characters")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .frame(maxWidth: .infinity, alignment: .leading)
+                if !viewModel.signupPassword.isEmpty {
+                    PasswordStrengthView(
+                        password: viewModel.signupPassword,
+                        showPasswordMatch: true,
+                        confirmPassword: viewModel.signupConfirmPassword
+                    )
+                }
 
                 Button {
                     Task {
