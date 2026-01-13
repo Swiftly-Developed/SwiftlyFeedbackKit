@@ -291,7 +291,7 @@ struct MondaySettingsView: View {
                 Text("1. Log in to monday.com\n2. Click your avatar > Developers\n3. Go to 'My Access Tokens'\n4. Create a new token or copy an existing one")
             }
             .sheet(isPresented: $showPaywall) {
-                PaywallView(requiredTier: .pro, forceShowPaywall: true)
+                PaywallView(requiredTier: .pro)
             }
             .task {
                 if hasToken {

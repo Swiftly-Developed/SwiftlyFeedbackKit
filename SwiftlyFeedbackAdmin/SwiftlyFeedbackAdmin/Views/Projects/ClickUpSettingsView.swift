@@ -326,7 +326,7 @@ struct ClickUpSettingsView: View {
                 Text("Go to ClickUp Settings > Apps > API Token. Copy your personal API token.")
             }
             .sheet(isPresented: $showPaywall) {
-                PaywallView(requiredTier: .pro, forceShowPaywall: true)
+                PaywallView(requiredTier: .pro)
             }
             .task {
                 // Load workspaces if token exists

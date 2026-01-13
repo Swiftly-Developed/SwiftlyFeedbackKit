@@ -1318,7 +1318,7 @@ struct FeedbackCategoryBadge: View {
 
 struct MrrBadge: View {
     let mrr: String
-    @State private var subscriptionService = SubscriptionService.shared
+    @Environment(SubscriptionService.self) private var subscriptionService
 
     var body: some View {
         if subscriptionService.meetsRequirement(.pro), !mrr.isEmpty {

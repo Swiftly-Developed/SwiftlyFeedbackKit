@@ -8,7 +8,7 @@
 import SwiftUI
 
 struct SubscriptionView: View {
-    @State private var subscriptionService = SubscriptionService.shared
+    @Environment(SubscriptionService.self) private var subscriptionService
     @State private var showRestoreAlert = false
     @State private var restoreMessage = ""
     @State private var showPaywall = false
@@ -28,7 +28,7 @@ struct SubscriptionView: View {
             featureComparisonSection
 
             // Manage Subscription Section (for paid subscribers)
-            if subscriptionService.isPaidSubscriber && !subscriptionService.hasEnvironmentOverride {
+            if subscriptionService.isPaidSubscriber {
                 manageSubscriptionSection
             }
 
@@ -44,7 +44,7 @@ struct SubscriptionView: View {
         } message: {
             Text(restoreMessage)
         }
-        .alert("Error", isPresented: $subscriptionService.showError) {
+        .alert("Error", isPresented: Bindable(subscriptionService).showError) {
             Button("OK") {
                 subscriptionService.clearError()
             }
@@ -56,11 +56,8 @@ struct SubscriptionView: View {
     /// Whether to show the upgrade section
     /// Shows for free users, and Pro users who might want Team
     private var canShowUpgradeSection: Bool {
-        if subscriptionService.hasEnvironmentOverride {
-            return false
-        }
         // Show if user is not at max tier (Team)
-        return displayTier != .team
+        displayTier != .team
     }
 
     // MARK: - Current Plan Section
@@ -87,27 +84,11 @@ struct SubscriptionView: View {
                 }
 
                 VStack(alignment: .leading, spacing: 4) {
-                    HStack(spacing: 6) {
-                        Text(displayTier.displayName)
-                            .font(.title3)
-                            .fontWeight(.semibold)
+                    Text(displayTier.displayName)
+                        .font(.title3)
+                        .fontWeight(.semibold)
 
-                        if subscriptionService.hasEnvironmentOverride {
-                            Text("DEV")
-                                .font(.caption2)
-                                .fontWeight(.semibold)
-                                .foregroundStyle(.white)
-                                .padding(.horizontal, 6)
-                                .padding(.vertical, 2)
-                                .background(.orange, in: Capsule())
-                        }
-                    }
-
-                    if subscriptionService.hasEnvironmentOverride {
-                        Text("All features unlocked for testing")
-                            .font(.subheadline)
-                            .foregroundStyle(.orange)
-                    } else if subscriptionService.isPaidSubscriber {
+                    if subscriptionService.isPaidSubscriber {
                         if let expirationDate = subscriptionService.subscriptionExpirationDate {
                             if subscriptionService.willRenew {
                                 Text("Renews \(expirationDate.formatted(date: .abbreviated, time: .omitted))")
@@ -131,7 +112,7 @@ struct SubscriptionView: View {
                 if displayTier != .free {
                     Image(systemName: "checkmark.seal.fill")
                         .font(.title2)
-                        .foregroundStyle(subscriptionService.hasEnvironmentOverride ? .orange : .green)
+                        .foregroundStyle(.green)
                 }
             }
             .padding(.vertical, 8)

@@ -31,8 +31,7 @@ enum Distribution: String, Sendable {
     static var current: Distribution {
         // 1. Compile-time detection (most reliable when configured)
         #if DEBUG
-        // In DEBUG, check for TestFlight simulation
-        return BuildEnvironment.simulateTestFlight ? .testflight : .debug
+        return .debug
         #elseif TESTFLIGHT
         return .testflight
         #else
@@ -51,50 +50,12 @@ enum Distribution: String, Sendable {
 /// Detects and provides information about the current build environment
 enum BuildEnvironment {
 
-    // MARK: - Simulation (Debug Only)
-
-    #if DEBUG
-    /// Cached value for TestFlight simulation (for non-MainActor access).
-    /// Updated when the property is set, and initialized from SecureStorageManager at launch.
-    nonisolated(unsafe) private static var _simulateTestFlight: Bool = false
-
-    /// Initialize debug settings from secure storage.
-    /// Call this at app launch from MainActor context.
-    @MainActor
-    static func initializeDebugSettings() {
-        _simulateTestFlight = SecureStorageManager.shared.get(.simulateTestFlight) ?? false
-        AppLogger.storage.debug("Debug settings initialized: simulateTestFlight=\(_simulateTestFlight)")
-    }
-    #endif
-
-    /// Debug override to simulate TestFlight (for local testing)
-    /// Set this to true in Debug Settings to test TestFlight behavior.
-    /// In DEBUG builds, uses SecureStorageManager with a cached value for non-MainActor access.
-    static var simulateTestFlight: Bool {
-        get {
-            #if DEBUG
-            return _simulateTestFlight
-            #else
-            return false
-            #endif
-        }
-        set {
-            #if DEBUG
-            _simulateTestFlight = newValue
-            Task { @MainActor in
-                SecureStorageManager.shared.set(newValue, for: .simulateTestFlight)
-                AppLogger.storage.debug("TestFlight simulation: \(newValue)")
-            }
-            #endif
-        }
-    }
-
     // MARK: - Build Type Detection
 
     /// Check if the app is running in DEBUG mode (Xcode development)
     static var isDebug: Bool {
         #if DEBUG
-        return !simulateTestFlight
+        return true
         #else
         return false
         #endif
@@ -104,8 +65,7 @@ enum BuildEnvironment {
     /// Uses compile-time flag if available, falls back to runtime detection
     static var isTestFlight: Bool {
         #if DEBUG
-        // In DEBUG mode, check if we're simulating TestFlight
-        return simulateTestFlight
+        return false
         #elseif TESTFLIGHT
         // Compile-time flag is set - this is a TestFlight build
         return true
@@ -233,7 +193,7 @@ extension BuildEnvironment {
         appStore: @autoclosure () -> T
     ) -> T {
         #if DEBUG
-        return simulateTestFlight ? testflight() : debug()
+        return debug()
         #elseif TESTFLIGHT
         return testflight()
         #else

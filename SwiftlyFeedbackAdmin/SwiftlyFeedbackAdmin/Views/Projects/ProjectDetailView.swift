@@ -21,7 +21,7 @@ struct ProjectDetailView: View {
     @State private var copiedToClipboard = false
     @State private var showingPaywall = false
     @State private var paywallRequiredTier: SubscriptionTier = .pro
-    @State private var subscriptionService = SubscriptionService.shared
+    @Environment(SubscriptionService.self) private var subscriptionService
 
     private var isCompact: Bool {
         #if os(macOS)

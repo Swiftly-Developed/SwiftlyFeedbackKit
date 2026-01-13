@@ -22,28 +22,4 @@
    <FileRef
       location = "group:docs/PUSH_NOTIFICATIONS_PLAN.md">
    </FileRef>
-   <FileRef
-      location = "group:docs/keychain-migration/PHASE_1_INFRASTRUCTURE.md">
-   </FileRef>
-   <FileRef
-      location = "group:docs/keychain-migration/PHASE_2_AUTH_TOKEN.md">
-   </FileRef>
-   <FileRef
-      location = "group:docs/keychain-migration/PHASE_3_ONBOARDING.md">
-   </FileRef>
-   <FileRef
-      location = "group:docs/keychain-migration/PHASE_4_APP_CONFIGURATION.md">
-   </FileRef>
-   <FileRef
-      location = "group:docs/keychain-migration/PHASE_5_APPSTORAGE.md">
-   </FileRef>
-   <FileRef
-      location = "group:docs/keychain-migration/PHASE_6_DEBUG_SETTINGS.md">
-   </FileRef>
-   <FileRef
-      location = "group:docs/keychain-migration/PHASE_7_DEVELOPER_CENTER.md">
-   </FileRef>
-   <FileRef
-      location = "group:docs/keychain-migration/PHASE_8_MIGRATION.md">
-   </FileRef>
 </Workspace>

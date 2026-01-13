@@ -58,16 +58,13 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 struct SwiftlyFeedbackAdminApp: App {
     #if os(macOS)
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
+    @Environment(\.openWindow) private var openWindow
     #endif
 
     @State private var deepLinkManager = DeepLinkManager.shared
+    @State private var developerCenterViewModel = ProjectViewModel()
 
     init() {
-        #if DEBUG
-        // Initialize debug settings from secure storage (must be called before other services)
-        BuildEnvironment.initializeDebugSettings()
-        #endif
-
         // Configure subscription service at app launch
         SubscriptionService.shared.configure()
 
@@ -77,8 +74,10 @@ struct SwiftlyFeedbackAdminApp: App {
     }
 
     var body: some Scene {
+        // Main app window
         WindowGroup {
             RootView()
+                .environment(SubscriptionService.shared)
                 .environment(deepLinkManager)
                 .onOpenURL { url in
                     deepLinkManager.handleURL(url)
@@ -86,61 +85,30 @@ struct SwiftlyFeedbackAdminApp: App {
         }
         #if os(macOS)
         .commands {
-            DeveloperCenterCommands()
-        }
-        #endif
-    }
-}
+            // Disable Cmd+N to prevent multiple main windows
+            CommandGroup(replacing: .newItem) { }
 
-// MARK: - Developer Center Menu (macOS)
-
-#if os(macOS)
-struct DeveloperCenterCommands: Commands {
-    var body: some Commands {
-        if BuildEnvironment.canShowTestingFeatures {
+            // Developer Center menu item
             CommandGroup(after: .appSettings) {
                 Button("Developer Center...") {
-                    DeveloperCenterWindowController.shared.showWindow()
+                    openWindow(id: "developer-center")
                 }
                 .keyboardShortcut("D", modifiers: [.command, .shift])
             }
         }
+        #endif
+
+        // Developer Center window (macOS only, single instance)
+        #if os(macOS)
+        Window("Developer Center", id: "developer-center") {
+            DeveloperCenterView(projectViewModel: developerCenterViewModel, isStandaloneWindow: true)
+                .environment(SubscriptionService.shared)
+                .frame(minWidth: 500, minHeight: 600)
+                .task {
+                    await developerCenterViewModel.loadProjects()
+                }
+        }
+        .defaultSize(width: 550, height: 650)
+        #endif
     }
 }
-
-@MainActor
-final class DeveloperCenterWindowController {
-    static let shared = DeveloperCenterWindowController()
-
-    private var window: NSWindow?
-
-    private init() {}
-
-    func showWindow() {
-        if let existingWindow = window, existingWindow.isVisible {
-            existingWindow.makeKeyAndOrderFront(nil)
-            return
-        }
-
-        let projectViewModel = ProjectViewModel()
-
-        let contentView = DeveloperCenterView(projectViewModel: projectViewModel, isStandaloneWindow: true)
-            .frame(minWidth: 500, minHeight: 600)
-
-        let hostingController = NSHostingController(rootView: contentView)
-        let window = NSWindow(contentViewController: hostingController)
-        window.title = "Developer Center"
-        window.styleMask = [.titled, .closable, .miniaturizable, .resizable]
-        window.setContentSize(NSSize(width: 550, height: 650))
-        window.center()
-        window.makeKeyAndOrderFront(nil)
-
-        self.window = window
-
-        // Load projects
-        Task {
-            await projectViewModel.loadProjects()
-        }
-    }
-}
-#endif

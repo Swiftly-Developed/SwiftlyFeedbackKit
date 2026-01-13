@@ -5,7 +5,7 @@ struct SettingsView: View {
     var projectViewModel: ProjectViewModel?
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
 
-    @State private var subscriptionService = SubscriptionService.shared
+    @Environment(SubscriptionService.self) private var subscriptionService
     @State private var appConfiguration = AppConfiguration.shared
     @State private var showingLogoutConfirmation = false
     @State private var showingChangePassword = false

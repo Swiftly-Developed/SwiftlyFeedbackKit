@@ -38,12 +38,6 @@ enum StorageKey: String, CaseIterable, Sendable {
     /// Simulated subscription tier for testing (debug-only)
     case simulatedSubscriptionTier = "simulatedSubscriptionTier"
 
-    /// Flag to disable environment override (debug-only)
-    case disableEnvironmentOverride = "disableEnvironmentOverride"
-
-    /// Flag to simulate TestFlight build (debug-only)
-    case simulateTestFlight = "simulateTestFlight"
-
     // MARK: - Properties
 
     /// Whether this key's data should be isolated per environment
@@ -59,9 +53,7 @@ enum StorageKey: String, CaseIterable, Sendable {
              .projectViewMode:
             return true
         case .selectedEnvironment,
-             .simulatedSubscriptionTier,
-             .disableEnvironmentOverride,
-             .simulateTestFlight:
+             .simulatedSubscriptionTier:
             return false
         }
     }
@@ -71,9 +63,7 @@ enum StorageKey: String, CaseIterable, Sendable {
         switch self {
         case .selectedEnvironment:
             return "global"
-        case .simulatedSubscriptionTier,
-             .disableEnvironmentOverride,
-             .simulateTestFlight:
+        case .simulatedSubscriptionTier:
             return "debug"
         default:
             return nil
@@ -83,9 +73,7 @@ enum StorageKey: String, CaseIterable, Sendable {
     /// Whether this key is only available in DEBUG builds
     var isDebugOnly: Bool {
         switch self {
-        case .simulatedSubscriptionTier,
-             .disableEnvironmentOverride,
-             .simulateTestFlight:
+        case .simulatedSubscriptionTier:
             return true
         default:
             return false

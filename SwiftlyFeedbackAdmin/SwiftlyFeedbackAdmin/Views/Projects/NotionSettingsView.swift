@@ -242,7 +242,7 @@ struct NotionSettingsView: View {
                 Text("1. Go to notion.so/my-integrations\n2. Create a new Internal Integration\n3. Copy the Integration Secret\n4. Open your target database and share it with the integration (... menu > Add connections)")
             }
             .sheet(isPresented: $showPaywall) {
-                PaywallView(requiredTier: .pro, forceShowPaywall: true)
+                PaywallView(requiredTier: .pro)
             }
             .task {
                 if hasToken {

@@ -98,7 +98,7 @@ struct UsersListView: View {
 
 struct StatsGridView: View {
     let stats: SDKUserStats
-    @State private var subscriptionService = SubscriptionService.shared
+    @Environment(SubscriptionService.self) private var subscriptionService
 
     private let columns = [
         GridItem(.flexible(minimum: 120, maximum: 200)),
@@ -147,7 +147,7 @@ struct StatsGridView: View {
 
 struct UserRowView: View {
     let user: SDKUser
-    @State private var subscriptionService = SubscriptionService.shared
+    @Environment(SubscriptionService.self) private var subscriptionService
 
     private var formattedMRR: String {
         guard let mrr = user.mrr, mrr > 0 else { return "-" }

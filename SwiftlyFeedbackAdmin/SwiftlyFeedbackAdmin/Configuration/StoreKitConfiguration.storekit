@@ -1,0 +1,179 @@
+{
+  "identifier" : "com.swiftly-developed.SwiftlyFeedbackKit.storekit",
+  "nonRenewingSubscriptions" : [
+
+  ],
+  "products" : [
+
+  ],
+  "settings" : {
+    "_applicationInternalID" : "6740073912",
+    "_developerTeamID" : "7V63G2H7VH",
+    "_failTransactionsEnabled" : false,
+    "_lastSynchronizedDate" : 758736849.33809996,
+    "_locale" : "en_US",
+    "_storefront" : "USA",
+    "_storeKitErrors" : [
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Load Products"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Purchase"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Verification"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "App Store Sync"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Subscription Status"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "App Transaction"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Manage Subscriptions Sheet"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Refund Request Sheet"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Offer Code Redeem Sheet"
+      }
+    ]
+  },
+  "subscriptionGroups" : [
+    {
+      "id" : "21625498",
+      "localizations" : [
+
+      ],
+      "name" : "Swiftly FeedbackKit Subscriptions",
+      "subscriptions" : [
+        {
+          "adHocOffers" : [
+
+          ],
+          "codeOffers" : [
+
+          ],
+          "displayPrice" : "4.99",
+          "familyShareable" : false,
+          "groupNumber" : 1,
+          "internalID" : "pro_monthly",
+          "introductoryOffer" : null,
+          "localizations" : [
+            {
+              "description" : "Unlock Pro features with monthly billing",
+              "displayName" : "Swiftly Pro Monthly",
+              "locale" : "en_US"
+            }
+          ],
+          "productID" : "swiftlyfeedback.pro.monthly",
+          "recurringSubscriptionPeriod" : "P1M",
+          "referenceName" : "Swiftly Pro Monthly",
+          "subscriptionGroupID" : "21625498",
+          "type" : "RecurringSubscription"
+        },
+        {
+          "adHocOffers" : [
+
+          ],
+          "codeOffers" : [
+
+          ],
+          "displayPrice" : "49.99",
+          "familyShareable" : false,
+          "groupNumber" : 1,
+          "internalID" : "pro_yearly",
+          "introductoryOffer" : null,
+          "localizations" : [
+            {
+              "description" : "Unlock Pro features with yearly billing - save 17%",
+              "displayName" : "Swiftly Pro Yearly",
+              "locale" : "en_US"
+            }
+          ],
+          "productID" : "swiftlyfeedback.pro.yearly",
+          "recurringSubscriptionPeriod" : "P1Y",
+          "referenceName" : "Swiftly Pro Yearly",
+          "subscriptionGroupID" : "21625498",
+          "type" : "RecurringSubscription"
+        },
+        {
+          "adHocOffers" : [
+
+          ],
+          "codeOffers" : [
+
+          ],
+          "displayPrice" : "9.99",
+          "familyShareable" : false,
+          "groupNumber" : 2,
+          "internalID" : "team_monthly",
+          "introductoryOffer" : null,
+          "localizations" : [
+            {
+              "description" : "Unlock Team features with monthly billing",
+              "displayName" : "Swiftly Team Monthly",
+              "locale" : "en_US"
+            }
+          ],
+          "productID" : "swiftlyfeedback.team.monthly",
+          "recurringSubscriptionPeriod" : "P1M",
+          "referenceName" : "Swiftly Team Monthly",
+          "subscriptionGroupID" : "21625498",
+          "type" : "RecurringSubscription"
+        },
+        {
+          "adHocOffers" : [
+
+          ],
+          "codeOffers" : [
+
+          ],
+          "displayPrice" : "99.99",
+          "familyShareable" : false,
+          "groupNumber" : 2,
+          "internalID" : "team_yearly",
+          "introductoryOffer" : null,
+          "localizations" : [
+            {
+              "description" : "Unlock Team features with yearly billing - save 17%",
+              "displayName" : "Swiftly Team Yearly",
+              "locale" : "en_US"
+            }
+          ],
+          "productID" : "swiftlyfeedback.team.yearly",
+          "recurringSubscriptionPeriod" : "P1Y",
+          "referenceName" : "Swiftly Team Yearly",
+          "subscriptionGroupID" : "21625498",
+          "type" : "RecurringSubscription"
+        }
+      ]
+    }
+  ],
+  "version" : {
+    "major" : 4,
+    "minor" : 0
+  }
+}

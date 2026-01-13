@@ -132,7 +132,7 @@ struct CreateProjectView: View {
                 Text(viewModel.errorMessage ?? "An error occurred")
             }
             .sheet(isPresented: $showPaywall) {
-                PaywallView(requiredTier: requiredTier, forceShowPaywall: true)
+                PaywallView(requiredTier: requiredTier)
             }
             #if os(macOS)
             .frame(minWidth: 400, minHeight: 350)

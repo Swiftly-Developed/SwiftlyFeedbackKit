@@ -169,8 +169,6 @@ Type-safe enum with scope configuration:
 | `.projectViewMode` | Environment | Project list preference |
 | `.selectedEnvironment` | Global | Current server environment |
 | `.simulatedSubscriptionTier` | Debug | Tier simulation (DEBUG only) |
-| `.disableEnvironmentOverride` | Debug | Disable tier override |
-| `.simulateTestFlight` | Debug | Simulate TestFlight build |
 
 ### SecureAppStorage
 
@@ -268,9 +266,6 @@ BuildEnvironment.isTestFlight         // TestFlight distribution
 BuildEnvironment.isAppStore           // App Store distribution
 BuildEnvironment.canShowTestingFeatures  // DEBUG || TestFlight
 BuildEnvironment.displayName          // "Debug", "TestFlight", or "App Store"
-
-// Simulate TestFlight in DEBUG
-BuildEnvironment.simulateTestFlight = true
 ```
 
 **Compile-time:** Add `TESTFLIGHT` to Active Compilation Conditions for reliable detection.

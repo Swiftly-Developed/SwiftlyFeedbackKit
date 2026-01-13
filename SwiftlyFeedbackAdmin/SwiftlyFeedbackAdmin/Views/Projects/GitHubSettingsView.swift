@@ -172,7 +172,7 @@ struct GitHubSettingsView: View {
                 Text("Go to GitHub Settings > Developer Settings > Personal Access Tokens > Tokens (classic). Create a token with 'repo' scope for private repos or 'public_repo' for public repos.")
             }
             .sheet(isPresented: $showPaywall) {
-                PaywallView(requiredTier: .pro, forceShowPaywall: true)
+                PaywallView(requiredTier: .pro)
             }
         }
     }

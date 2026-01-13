@@ -31,7 +31,7 @@ struct ProjectListView: View {
     @State private var showingCreateSheet = false
     @State private var showingAcceptInviteSheet = false
     @State private var showPaywall = false
-    @State private var subscriptionService = SubscriptionService.shared
+    @Environment(SubscriptionService.self) private var subscriptionService
     @SecureAppStorage(.projectViewMode) private var viewModeRaw: String = ProjectViewMode.list.rawValue
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
 

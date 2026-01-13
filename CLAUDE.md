@@ -14,6 +14,47 @@ Feedback Kit is a feedback collection platform with four subprojects:
 
 Each subproject has its own `CLAUDE.md` with detailed documentation.
 
+## Git Remotes & Branching
+
+This workspace pushes to multiple GitHub repositories:
+
+| Remote | Repository | Purpose |
+|--------|------------|---------|
+| `origin` | [FeedbackKit-Workspace](https://github.com/Swiftly-Developed/FeedbackKit-Workspace.git) | Main workspace (all subprojects) |
+| `feedbackkit-sdk` | [SwiftlyFeedbackKit](https://github.com/Swiftly-Developed/SwiftlyFeedbackKit.git) | SDK-only repo (for SPM distribution) |
+| `feedbackkit-admin` | [SwiftlyFeedbackAdmin](https://github.com/Swiftly-Developed/SwiftlyFeedbackAdmin.git) | Admin app standalone repo |
+| `feedbackkit-demo` | [SwiftlyFeedbackDemoApp](https://github.com/Swiftly-Developed/SwiftlyFeedbackDemoApp.git) | Demo app standalone repo |
+
+**Branches:**
+- `dev` - Development branch (default working branch)
+- `testflight` - TestFlight/staging builds
+- `main` - Production releases
+
+**Pushing to remotes:**
+```bash
+# Push to main workspace (all changes)
+git push origin dev
+
+# Push SDK changes only (for SPM consumers)
+git push feedbackkit-sdk dev
+
+# Push Admin app changes
+git push feedbackkit-admin dev
+
+# Push Demo app changes
+git push feedbackkit-demo dev
+
+# Push all remotes at once
+git push origin dev && git push feedbackkit-sdk dev && git push feedbackkit-admin dev && git push feedbackkit-demo dev
+```
+
+**Adding remotes (if missing):**
+```bash
+git remote add feedbackkit-sdk https://github.com/Swiftly-Developed/SwiftlyFeedbackKit.git
+git remote add feedbackkit-admin https://github.com/Swiftly-Developed/SwiftlyFeedbackAdmin.git
+git remote add feedbackkit-demo https://github.com/Swiftly-Developed/SwiftlyFeedbackDemoApp.git
+```
+
 ## Tech Stack
 
 - **Language**: Swift 6.2

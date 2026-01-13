@@ -29,7 +29,7 @@ struct FeedbackDashboardView: View {
     @State private var feedbackToOpen: Feedback?
     @SecureAppStorage(.dashboardViewMode) private var viewModeRaw: String = DashboardViewMode.kanban.rawValue
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
-    @State private var subscriptionService = SubscriptionService.shared
+    @Environment(SubscriptionService.self) private var subscriptionService
     @State private var showingPaywall = false
 
     private var viewMode: DashboardViewMode {

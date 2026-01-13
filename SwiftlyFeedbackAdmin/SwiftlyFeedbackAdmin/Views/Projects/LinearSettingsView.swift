@@ -274,7 +274,7 @@ struct LinearSettingsView: View {
                 Text("1. Open Linear and go to Settings\n2. Navigate to API section\n3. Click 'Personal API Keys'\n4. Create a new key and copy it")
             }
             .sheet(isPresented: $showPaywall) {
-                PaywallView(requiredTier: .pro, forceShowPaywall: true)
+                PaywallView(requiredTier: .pro)
             }
             .task {
                 if hasToken {

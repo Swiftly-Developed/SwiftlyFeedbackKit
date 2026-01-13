@@ -61,6 +61,9 @@ struct RootView: View {
 
             // Clear project cache
             projectViewModel.clearCache()
+
+            // Refresh onboarding state for new environment
+            onboardingManager.refreshFromStorage()
         }
     }
 }

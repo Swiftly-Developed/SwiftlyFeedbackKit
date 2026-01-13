@@ -12,31 +12,16 @@ struct PaywallView: View {
     /// The minimum tier required for the feature that triggered the paywall
     let requiredTier: SubscriptionTier
 
-    /// When true, forces showing the actual paywall even if environment override is active.
-    /// Use this when triggered by a server 402 response (server doesn't respect client-side override).
-    let forceShowPaywall: Bool
-
-    @State private var subscriptionService = SubscriptionService.shared
+    @Environment(SubscriptionService.self) private var subscriptionService
     @State private var selectedTier: SubscriptionTier = .pro
     @State private var isYearly = true
     @State private var showError = false
     @State private var errorMessage = ""
-    @State private var isOverridingTier = false
     @Environment(\.dismiss) private var dismiss
 
     /// Initialize with a required tier (defaults to .pro for backwards compatibility)
-    init(requiredTier: SubscriptionTier = .pro, forceShowPaywall: Bool = false) {
+    init(requiredTier: SubscriptionTier = .pro) {
         self.requiredTier = requiredTier
-        self.forceShowPaywall = forceShowPaywall
-    }
-
-    /// Whether the environment override is active (DEV/TestFlight)
-    /// Returns false if forceShowPaywall is true (e.g., triggered by server 402)
-    private var hasEnvironmentOverride: Bool {
-        if forceShowPaywall {
-            return false
-        }
-        return subscriptionService.hasEnvironmentOverride
     }
 
     /// Get the package for a specific tier and billing period
@@ -68,37 +53,23 @@ struct PaywallView: View {
         }
     }
 
-    /// Whether we're in a non-production environment where server tier override is available
-    private var canUseServerOverride: Bool {
-        let env = AppConfiguration.currentEnvironment
-        return env == .localhost || env == .development || env == .testflight
-    }
-
     var body: some View {
         NavigationStack {
-            Group {
-                if hasEnvironmentOverride {
-                    environmentOverrideView
-                } else {
-                    paywallContent
-                }
-            }
-            .navigationTitle(hasEnvironmentOverride ? "Features Unlocked" : "")
+            paywallContent
+            .navigationTitle("")
             #if os(iOS)
             .navigationBarTitleDisplayMode(.inline)
             #endif
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button(hasEnvironmentOverride ? "Done" : "Cancel") { dismiss() }
+                    Button("Cancel") { dismiss() }
                 }
             }
             .task {
-                if !hasEnvironmentOverride {
-                    await subscriptionService.fetchOfferings()
-                    // Pre-select required tier if it's Team
-                    if requiredTier == .team {
-                        selectedTier = .team
-                    }
+                await subscriptionService.fetchOfferings()
+                // Pre-select required tier if it's Team
+                if requiredTier == .team {
+                    selectedTier = .team
                 }
             }
             .alert("Error", isPresented: $showError) {
@@ -107,64 +78,6 @@ struct PaywallView: View {
                 Text(errorMessage)
             }
         }
-    }
-
-    // MARK: - Environment Override View
-
-    @ViewBuilder
-    private var environmentOverrideView: some View {
-        VStack(spacing: 24) {
-            Spacer()
-
-            Image(systemName: "checkmark.seal.fill")
-                .font(.system(size: 80))
-                .foregroundStyle(.linearGradient(
-                    colors: [.orange, .yellow],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                ))
-
-            VStack(spacing: 8) {
-                Text("All Features Unlocked")
-                    .font(.title)
-                    .fontWeight(.bold)
-
-                Text("You're using \(AppConfiguration.currentEnvironment.displayName) environment")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-            }
-
-            VStack(alignment: .leading, spacing: 12) {
-                FeatureCheckRow(text: "Unlimited Projects")
-                FeatureCheckRow(text: "Unlimited Feedback")
-                FeatureCheckRow(text: "Team Members")
-                FeatureCheckRow(text: "All Integrations")
-                FeatureCheckRow(text: "Advanced Analytics")
-            }
-            .padding()
-            .background(.orange.opacity(0.1), in: RoundedRectangle(cornerRadius: 12))
-
-            Text("DEV/TestFlight environments have all features enabled for testing purposes.")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
-                .padding(.horizontal)
-
-            Spacer()
-
-            Button {
-                dismiss()
-            } label: {
-                Text("Got It")
-                    .fontWeight(.semibold)
-                    .frame(maxWidth: .infinity)
-                    .padding()
-                    .background(.orange)
-                    .foregroundStyle(.white)
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
-            }
-        }
-        .padding()
     }
 
     // MARK: - Paywall Content
@@ -412,70 +325,28 @@ struct PaywallView: View {
         let currentPackage = selectedPackage(from: offering)
         let tierColor: Color = selectedTier == .team ? .blue : .purple
 
-        VStack(spacing: 12) {
-            // DEV-only: Server override button for non-production environments
-            if canUseServerOverride {
-                Button {
-                    Task {
-                        await overrideTierOnServer()
-                    }
-                } label: {
-                    HStack {
-                        if isOverridingTier {
-                            ProgressView()
-                                .controlSize(.small)
-                                .tint(.white)
-                        } else {
-                            Image(systemName: "hammer.fill")
-                            Text("DEV: Unlock \(selectedTier.displayName) on Server")
-                                .fontWeight(.semibold)
-                        }
-                    }
-                    .frame(maxWidth: .infinity)
-                    .padding()
-                    .background(.orange)
-                    .foregroundStyle(.white)
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
-                }
-                .disabled(subscriptionService.isLoading || isOverridingTier)
-
-                Text("This bypasses StoreKit and updates your server-side subscription tier for testing.")
-                    .font(.caption2)
-                    .foregroundStyle(.orange)
-                    .multilineTextAlignment(.center)
-
-                Divider()
-                    .padding(.vertical, 4)
-
-                Text("Or subscribe via App Store:")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+        Button {
+            Task {
+                await purchasePackage(currentPackage)
             }
-
-            // Regular subscribe button
-            Button {
-                Task {
-                    await purchasePackage(currentPackage)
+        } label: {
+            HStack {
+                if subscriptionService.isLoading {
+                    ProgressView()
+                        .controlSize(.small)
+                        .tint(.white)
+                } else {
+                    Text("Subscribe to \(selectedTier.displayName)")
+                        .fontWeight(.semibold)
                 }
-            } label: {
-                HStack {
-                    if subscriptionService.isLoading {
-                        ProgressView()
-                            .controlSize(.small)
-                            .tint(.white)
-                    } else {
-                        Text("Subscribe to \(selectedTier.displayName)")
-                            .fontWeight(.semibold)
-                    }
-                }
-                .frame(maxWidth: .infinity)
-                .padding()
-                .background(currentPackage == nil ? Color.gray : tierColor)
-                .foregroundStyle(.white)
-                .clipShape(RoundedRectangle(cornerRadius: 12))
             }
-            .disabled(currentPackage == nil || subscriptionService.isLoading || isOverridingTier)
+            .frame(maxWidth: .infinity)
+            .padding()
+            .background(currentPackage == nil ? Color.gray : tierColor)
+            .foregroundStyle(.white)
+            .clipShape(RoundedRectangle(cornerRadius: 12))
         }
+        .disabled(currentPackage == nil || subscriptionService.isLoading)
     }
 
     // MARK: - Footer Section
@@ -530,24 +401,6 @@ struct PaywallView: View {
                 errorMessage = "No previous purchases found"
                 showError = true
             }
-        } catch {
-            errorMessage = error.localizedDescription
-            showError = true
-        }
-    }
-
-    /// DEV-only: Override subscription tier on the server for testing
-    private func overrideTierOnServer() async {
-        isOverridingTier = true
-        defer { isOverridingTier = false }
-
-        do {
-            _ = try await AdminAPIClient.shared.overrideSubscriptionTier(selectedTier)
-            // Update client-side tier to match the server override
-            #if DEBUG
-            subscriptionService.simulatedTier = selectedTier
-            #endif
-            dismiss()
         } catch {
             errorMessage = error.localizedDescription
             showError = true

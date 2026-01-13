@@ -428,19 +428,26 @@ final class OnboardingViewModel {
 final class OnboardingManager {
     static let shared = OnboardingManager()
 
+    /// Stored property that @Observable can track for SwiftUI reactivity.
+    /// Synced with SecureStorageManager for persistence.
+    private var _hasCompletedOnboarding: Bool
+
     /// Whether onboarding has been completed for the current environment.
     /// This is environment-scoped, so each environment tracks completion independently.
     var hasCompletedOnboarding: Bool {
         get {
-            SecureStorageManager.shared.hasCompletedOnboarding
+            _hasCompletedOnboarding
         }
         set {
+            _hasCompletedOnboarding = newValue
             SecureStorageManager.shared.hasCompletedOnboarding = newValue
         }
     }
 
     private init() {
-        AppLogger.storage.info("OnboardingManager initialized - hasCompleted: \(SecureStorageManager.shared.hasCompletedOnboarding) for environment: \(SecureStorageManager.shared.currentEnvironment.rawValue)")
+        // Initialize stored property from SecureStorageManager
+        _hasCompletedOnboarding = SecureStorageManager.shared.hasCompletedOnboarding
+        AppLogger.storage.info("OnboardingManager initialized - hasCompleted: \(_hasCompletedOnboarding) for environment: \(SecureStorageManager.shared.currentEnvironment.rawValue)")
     }
 
     /// Marks onboarding as complete for the current environment.
@@ -453,5 +460,12 @@ final class OnboardingManager {
     func resetOnboarding() {
         hasCompletedOnboarding = false
         AppLogger.storage.info("Onboarding reset for environment: \(SecureStorageManager.shared.currentEnvironment.rawValue)")
+    }
+
+    /// Refreshes the stored property from SecureStorageManager.
+    /// Call this after environment changes to sync the state.
+    func refreshFromStorage() {
+        _hasCompletedOnboarding = SecureStorageManager.shared.hasCompletedOnboarding
+        AppLogger.storage.info("OnboardingManager refreshed - hasCompleted: \(_hasCompletedOnboarding)")
     }
 }

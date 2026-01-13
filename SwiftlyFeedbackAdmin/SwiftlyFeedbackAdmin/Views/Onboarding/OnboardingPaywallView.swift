@@ -11,18 +11,12 @@ import RevenueCat
 struct OnboardingPaywallView: View {
     let onContinue: () -> Void
 
-    @State private var subscriptionService = SubscriptionService.shared
+    @Environment(SubscriptionService.self) private var subscriptionService
     @State private var selectedTier: SubscriptionTier = .pro
     @State private var isYearly = true
     @State private var showError = false
     @State private var errorMessage = ""
-    @State private var isOverridingTier = false
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
-
-    /// Whether the environment override is active (DEV/TestFlight)
-    private var hasEnvironmentOverride: Bool {
-        subscriptionService.hasEnvironmentOverride
-    }
 
     /// Get the package for a specific tier and billing period
     private func package(for tier: SubscriptionTier, yearly: Bool, from offering: Offering) -> Package? {
@@ -43,102 +37,15 @@ struct OnboardingPaywallView: View {
         package(for: selectedTier, yearly: isYearly, from: offering)
     }
 
-    /// Whether we're in a non-production environment where server tier override is available
-    private var canUseServerOverride: Bool {
-        let env = AppConfiguration.currentEnvironment
-        return env == .localhost || env == .development || env == .testflight
-    }
-
     var body: some View {
-        Group {
-            if hasEnvironmentOverride {
-                environmentOverrideView
-            } else {
-                paywallContent
-            }
-        }
+        paywallContent
         .task {
-            if !hasEnvironmentOverride {
-                await subscriptionService.fetchOfferings()
-            }
+            await subscriptionService.fetchOfferings()
         }
         .alert("Error", isPresented: $showError) {
             Button("OK") {}
         } message: {
             Text(errorMessage)
-        }
-    }
-
-    // MARK: - Environment Override View
-
-    @ViewBuilder
-    private var environmentOverrideView: some View {
-        VStack(spacing: 0) {
-            // Scrollable content
-            ScrollView {
-                VStack(spacing: contentSpacing) {
-                    Spacer(minLength: 16)
-
-                    Image(systemName: "checkmark.seal.fill")
-                        .font(.system(size: iconSize))
-                        .foregroundStyle(.linearGradient(
-                            colors: [.orange, .yellow],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        ))
-
-                    VStack(spacing: 6) {
-                        Text("All Features Unlocked")
-                            .font(titleFont)
-                            .fontWeight(.bold)
-
-                        Text("You're using \(AppConfiguration.currentEnvironment.displayName) environment")
-                            .font(subtitleFont)
-                            .foregroundStyle(.secondary)
-                    }
-
-                    VStack(alignment: .leading, spacing: 10) {
-                        FeatureCheckRow(text: "Unlimited Projects")
-                        FeatureCheckRow(text: "Unlimited Feedback")
-                        FeatureCheckRow(text: "Team Members")
-                        FeatureCheckRow(text: "All Integrations")
-                    }
-                    .padding()
-                    .background(.orange.opacity(0.1), in: RoundedRectangle(cornerRadius: 12))
-                    .padding(.horizontal, horizontalPadding)
-
-                    Text("DEV/TestFlight environments have all features enabled for testing.")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .multilineTextAlignment(.center)
-                        .padding(.horizontal, horizontalPadding)
-
-                    Spacer(minLength: 16)
-                }
-                .frame(maxWidth: maxContentWidth)
-                .frame(maxWidth: .infinity)
-            }
-
-            // Fixed bottom button
-            VStack(spacing: 12) {
-                Button {
-                    onContinue()
-                } label: {
-                    Text("Continue")
-                        .font(.headline)
-                        .frame(maxWidth: buttonMaxWidth)
-                        .frame(minHeight: 44)
-                }
-                .buttonStyle(.borderedProminent)
-                .tint(.orange)
-                .controlSize(.large)
-            }
-            .padding(.horizontal, horizontalPadding)
-            .padding(.top, 12)
-            .padding(.bottom, bottomPadding)
-            .frame(maxWidth: maxContentWidth)
-            .frame(maxWidth: .infinity)
-            .background(bottomBackground)
         }
     }
 
@@ -355,61 +262,29 @@ struct OnboardingPaywallView: View {
         let currentPackage = selectedPackage(from: offering)
         let tierColor: Color = selectedTier == .team ? .blue : .purple
 
-        VStack(spacing: 10) {
-            // DEV-only: Server override button for non-production environments
-            if canUseServerOverride {
-                Button {
-                    Task {
-                        await overrideTierOnServer()
-                    }
-                } label: {
-                    HStack {
-                        if isOverridingTier {
-                            ProgressView()
-                                .controlSize(.small)
-                                .tint(.white)
-                        } else {
-                            Image(systemName: "hammer.fill")
-                            Text("DEV: Unlock \(selectedTier.displayName)")
-                                .fontWeight(.semibold)
-                        }
-                    }
-                    .font(.subheadline)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 10)
-                    .background(.orange)
-                    .foregroundStyle(.white)
-                    .clipShape(RoundedRectangle(cornerRadius: 10))
-                }
-                .disabled(subscriptionService.isLoading || isOverridingTier)
-
-                Divider()
+        Button {
+            Task {
+                await purchasePackage(currentPackage)
             }
-
-            Button {
-                Task {
-                    await purchasePackage(currentPackage)
+        } label: {
+            HStack {
+                if subscriptionService.isLoading {
+                    ProgressView()
+                        .controlSize(.small)
+                        .tint(.white)
+                } else {
+                    Text("Subscribe to \(selectedTier.displayName)")
+                        .fontWeight(.semibold)
                 }
-            } label: {
-                HStack {
-                    if subscriptionService.isLoading {
-                        ProgressView()
-                            .controlSize(.small)
-                            .tint(.white)
-                    } else {
-                        Text("Subscribe to \(selectedTier.displayName)")
-                            .fontWeight(.semibold)
-                    }
-                }
-                .font(.subheadline)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 12)
-                .background(currentPackage == nil ? Color.gray : tierColor)
-                .foregroundStyle(.white)
-                .clipShape(RoundedRectangle(cornerRadius: 10))
             }
-            .disabled(currentPackage == nil || subscriptionService.isLoading || isOverridingTier)
+            .font(.subheadline)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 12)
+            .background(currentPackage == nil ? Color.gray : tierColor)
+            .foregroundStyle(.white)
+            .clipShape(RoundedRectangle(cornerRadius: 10))
         }
+        .disabled(currentPackage == nil || subscriptionService.isLoading)
     }
 
     // MARK: - Footer Section
@@ -463,23 +338,6 @@ struct OnboardingPaywallView: View {
                 errorMessage = "No previous purchases found"
                 showError = true
             }
-        } catch {
-            errorMessage = error.localizedDescription
-            showError = true
-        }
-    }
-
-    /// DEV-only: Override subscription tier on the server for testing
-    private func overrideTierOnServer() async {
-        isOverridingTier = true
-        defer { isOverridingTier = false }
-
-        do {
-            _ = try await AdminAPIClient.shared.overrideSubscriptionTier(selectedTier)
-            #if DEBUG
-            subscriptionService.simulatedTier = selectedTier
-            #endif
-            onContinue()
         } catch {
             errorMessage = error.localizedDescription
             showError = true

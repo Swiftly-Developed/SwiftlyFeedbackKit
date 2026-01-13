@@ -7,9 +7,8 @@ struct ProjectMembersView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var showingAddMember = false
     @State private var showingPaywall = false
-    @State private var forceShowPaywall = false  // True when triggered by server 402
     @State private var shouldRetryAddMemberAfterPaywall = false  // Re-open add member sheet after successful paywall
-    @State private var subscriptionService = SubscriptionService.shared
+    @Environment(SubscriptionService.self) private var subscriptionService
 
     var body: some View {
         NavigationStack {
@@ -92,7 +91,6 @@ struct ProjectMembersView: View {
                         if subscriptionService.meetsRequirement(.team) {
                             showingAddMember = true
                         } else {
-                            forceShowPaywall = false  // User clicked button, show environment override if applicable
                             showingPaywall = true
                         }
                     } label: {
@@ -105,7 +103,6 @@ struct ProjectMembersView: View {
                 // Check if paywall needs to be shown after dismissing add member sheet
                 if viewModel.shouldShowPaywallAfterAddMember {
                     viewModel.shouldShowPaywallAfterAddMember = false
-                    forceShowPaywall = true  // Server returned 402, force actual paywall
                     shouldRetryAddMemberAfterPaywall = true  // Remember to re-open add member after paywall
                     showingPaywall = true
                 }
@@ -126,7 +123,7 @@ struct ProjectMembersView: View {
                     }
                 }
             }) {
-                PaywallView(requiredTier: .team, forceShowPaywall: forceShowPaywall)
+                PaywallView(requiredTier: .team)
             }
             .task {
                 await viewModel.loadMembers(projectId: projectId)

@@ -227,7 +227,7 @@ struct UsersDashboardView: View {
 
 struct UserStatsView: View {
     let stats: SDKUserStats
-    @State private var subscriptionService = SubscriptionService.shared
+    @Environment(SubscriptionService.self) private var subscriptionService
 
     #if os(macOS)
     private let columns = [
@@ -325,7 +325,7 @@ struct UserStatCard: View {
 
 struct UserDashboardRowView: View {
     let user: SDKUser
-    @State private var subscriptionService = SubscriptionService.shared
+    @Environment(SubscriptionService.self) private var subscriptionService
 
     private var formattedMRR: String {
         guard let mrr = user.mrr, mrr > 0 else { return "-" }

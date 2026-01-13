@@ -126,7 +126,7 @@ struct SlackSettingsView: View {
                 Text(viewModel.errorMessage ?? "An error occurred")
             }
             .sheet(isPresented: $showPaywall) {
-                PaywallView(requiredTier: .pro, forceShowPaywall: true)
+                PaywallView(requiredTier: .pro)
             }
         }
     }
