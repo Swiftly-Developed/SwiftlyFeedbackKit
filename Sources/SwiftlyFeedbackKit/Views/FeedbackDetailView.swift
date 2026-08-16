@@ -4,6 +4,8 @@ public struct FeedbackDetailView: View {
     let feedback: Feedback
     let swiftlyFeedback: SwiftlyFeedback?
     @State private var viewModel: FeedbackDetailViewModel
+    @State private var translator = FeedbackTranslator()
+    @SwiftUI.Environment(\.locale) private var locale
 
     private var config: SwiftlyFeedbackConfiguration { SwiftlyFeedback.config }
 
@@ -23,25 +25,71 @@ public struct FeedbackDetailView: View {
             } else {
                 ScrollView {
                     VStack(alignment: .leading, spacing: 16) {
-                        FeedbackDetailHeaderView(feedback: feedback)
+                        FeedbackDetailHeaderView(
+                            feedback: feedback,
+                            translatedTitle: headerProjection.title,
+                            translatedDescription: headerProjection.description,
+                            translatedRejectionReason: headerProjection.rejectionReason,
+                            translationSourceName: headerProjection.sourceName,
+                            isShowingOriginal: isShowingOriginalHeader,
+                            onToggleTranslation: {
+                                viewModel.toggleShowOriginal(viewModel.currentFeedback.id)
+                            }
+                        )
                         FeedbackDetailVoteView(viewModel: viewModel)
 
                         if config.showCommentSection {
-                            FeedbackDetailCommentsView(viewModel: viewModel)
+                            FeedbackDetailCommentsView(viewModel: viewModel, translator: translator)
                         }
                     }
                     .padding()
                 }
+                .refreshable {
+                    if config.showCommentSection {
+                        await viewModel.loadComments()
+                    }
+                }
             }
         }
-        .navigationTitle(Strings.feedbackDetailTitle)
+        .navigationTitle(displayedTitle)
         #if !os(macOS)
         .navigationBarTitleDisplayMode(.inline)
         #endif
+        .toolbar {
+            ToolbarItem {
+                ShareLink(item: "\(viewModel.currentFeedback.title)\n\n\(viewModel.currentFeedback.description)") {
+                    Label(Strings.toolbarShare, systemImage: "square.and.arrow.up")
+                }
+            }
+            #if os(macOS)
+            if config.showCommentSection {
+                ToolbarItem {
+                    Button(Strings.toolbarRefresh, systemImage: "arrow.clockwise") {
+                        Task { await viewModel.loadComments() }
+                    }
+                    .keyboardShortcut("r", modifiers: .command)
+                    .help(Strings.toolbarRefresh)
+                }
+            }
+            #endif
+        }
         .task {
             if config.showCommentSection {
                 await viewModel.loadComments()
             }
+        }
+        .feedbackTranslationTask(translator)
+        .onChange(of: viewModel.currentFeedback, initial: true) {
+            enqueueTranslations()
+        }
+        .onChange(of: viewModel.comments) {
+            enqueueTranslations()
+        }
+        .onChange(of: locale) {
+            // A locale change invalidates every cached projection (the target
+            // moved), then re-detects and re-enqueues against the new target.
+            translator.invalidateAll()
+            enqueueTranslations()
         }
         .onAppear {
             if SwiftlyFeedback.config.enableAutomaticViewTracking {
@@ -54,15 +102,112 @@ public struct FeedbackDetailView: View {
             Text(viewModel.errorMessage ?? Strings.errorGeneric)
         }
         .sheet(isPresented: $viewModel.showingVoteDialog) {
-            VoteDialogView(viewModel: viewModel)
+            VoteDialogView(
+                email: $viewModel.voteEmail,
+                notifyStatusChange: $viewModel.voteNotifyStatusChange,
+                subscribeToMailingList: $viewModel.voteSubscribeToMailingList,
+                operationalEmails: $viewModel.voteOperationalEmails,
+                marketingEmails: $viewModel.voteMarketingEmails
+            ) { email, notify, subscribeToMailingList, mailingListEmailTypes in
+                Task {
+                    await viewModel.submitVote(
+                        email: email,
+                        notify: notify,
+                        subscribeToMailingList: subscribeToMailingList,
+                        mailingListEmailTypes: mailingListEmailTypes
+                    )
+                }
+            }
         }
+    }
+
+    /// Whether the header (title + description + rejection reason together — one
+    /// toggle governs all three) is showing its original-language text.
+    private var isShowingOriginalHeader: Bool {
+        viewModel.showOriginalIDs.contains(viewModel.currentFeedback.id)
+    }
+
+    /// The header's translation inputs: cached projections plus the localized
+    /// source-language name. All `nil` (affordance absent, original text stands)
+    /// until the cache fills, and when the source language has no localized display
+    /// name — a raw code is never shown.
+    private var headerProjection: (
+        title: String?, description: String?, rejectionReason: String?, sourceName: String?
+    ) {
+        let item = viewModel.currentFeedback
+        let target = locale.language
+        let title = translator.translation(
+            for: item.id, field: .title, target: target, sourceText: item.title
+        )
+        let description = translator.translation(
+            for: item.id, field: .description, target: target, sourceText: item.description
+        )
+        let rejectionReason = item.rejectionReason.flatMap {
+            translator.translation(for: item.id, field: .rejectionReason, target: target, sourceText: $0)
+        }
+        guard title != nil || description != nil || rejectionReason != nil else {
+            return (nil, nil, nil, nil)
+        }
+        let source = SourceLanguageDetector.detect(item.description)
+            ?? SourceLanguageDetector.detect(item.title)
+        guard let sourceName = source?.localizedDisplayName(in: locale) else {
+            return (nil, nil, nil, nil)
+        }
+        return (title, description, rejectionReason, sourceName)
+    }
+
+    /// The navigation title uses the same projection as the header's title text.
+    private var displayedTitle: String {
+        if !isShowingOriginalHeader, headerProjection.sourceName != nil,
+           let translated = headerProjection.title {
+            return translated
+        }
+        return viewModel.currentFeedback.title
+    }
+
+    /// Detects source languages per field for the feedback and its comments and
+    /// queues the uncached remainder toward the current locale. Skipped entirely
+    /// when the target locale carries no language code.
+    private func enqueueTranslations() {
+        let target = locale.language
+        guard target.languageCode != nil else { return }
+        var units = SourceLanguageDetector.units(for: viewModel.currentFeedback, target: target)
+        units += viewModel.comments.compactMap {
+            SourceLanguageDetector.unit(for: $0, target: target)
+        }
+        translator.enqueue(units: units, target: target)
     }
 }
 
 struct FeedbackDetailHeaderView: View {
     let feedback: Feedback
+    /// Translated projections, `nil` when no translation is cached (defaults keep
+    /// existing call sites source-compatible). One affordance below the description
+    /// governs title, description, and rejection reason together.
+    var translatedTitle: String? = nil
+    var translatedDescription: String? = nil
+    var translatedRejectionReason: String? = nil
+    /// Localized source-language name; `nil` means the affordance is absent.
+    var translationSourceName: String? = nil
+    var isShowingOriginal: Bool = false
+    var onToggleTranslation: (() -> Void)? = nil
 
     private var config: SwiftlyFeedbackConfiguration { SwiftlyFeedback.config }
+
+    private var displayedTitle: String {
+        if !isShowingOriginal, let translatedTitle { return translatedTitle }
+        return feedback.title
+    }
+
+    private var displayedDescription: String {
+        if !isShowingOriginal, let translatedDescription { return translatedDescription }
+        return feedback.description
+    }
+
+    private func displayedRejectionReason(_ reason: String) -> String {
+        if !isShowingOriginal, let translatedRejectionReason { return translatedRejectionReason }
+        return reason
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -76,13 +221,21 @@ struct FeedbackDetailHeaderView: View {
                 Spacer()
             }
 
-            Text(feedback.title)
+            Text(displayedTitle)
                 .font(.title2)
                 .bold()
 
-            Text(feedback.description)
+            Text(displayedDescription)
                 .font(.body)
                 .foregroundStyle(.secondary)
+
+            if let translationSourceName, let onToggleTranslation {
+                TranslationAffordanceView(
+                    sourceLanguageName: translationSourceName,
+                    isShowingOriginal: isShowingOriginal,
+                    onToggle: onToggleTranslation
+                )
+            }
 
             // Rejection reason section (only shown when status is rejected and reason is provided)
             if feedback.status == .rejected,
@@ -98,7 +251,7 @@ struct FeedbackDetailHeaderView: View {
                     }
                     .foregroundStyle(.red)
 
-                    Text(reason)
+                    Text(displayedRejectionReason(reason))
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                 }
@@ -107,7 +260,7 @@ struct FeedbackDetailHeaderView: View {
                 .background(Color.red.opacity(0.1))
                 .clipShape(RoundedRectangle(cornerRadius: 8))
                 .accessibilityElement(children: .combine)
-                .accessibilityLabel(Strings.accessibilityRejectionReason(reason))
+                .accessibilityLabel(Strings.accessibilityRejectionReason(displayedRejectionReason(reason)))
             }
 
             if let createdAt = feedback.createdAt {
@@ -211,26 +364,70 @@ struct FeedbackDetailVoteView: View {
 
 struct FeedbackDetailCommentsView: View {
     @Bindable var viewModel: FeedbackDetailViewModel
+    let translator: FeedbackTranslator
     @SwiftUI.Environment(\.colorScheme) private var colorScheme
+    @SwiftUI.Environment(\.locale) private var locale
 
     private var theme: SwiftlyFeedbackTheme { SwiftlyFeedback.theme }
 
+    /// A comment row's translation inputs: the cached projection plus the localized
+    /// source-language name. Both `nil` (affordance absent, original text stands)
+    /// until the cache fills, and when the source language has no localized display
+    /// name — a raw code is never shown.
+    private func translationProjection(for comment: Comment) -> (text: String?, sourceName: String?) {
+        let target = locale.language
+        guard let text = translator.translation(
+            for: comment.id, field: .commentText, target: target, sourceText: comment.content
+        ) else {
+            return (nil, nil)
+        }
+        guard let sourceName = SourceLanguageDetector.detect(comment.content)?
+            .localizedDisplayName(in: locale) else {
+            return (nil, nil)
+        }
+        return (text, sourceName)
+    }
+
+    /// Placeholder comment for the loading skeleton: plausible metrics (a
+    /// one-line author row and a body long enough to wrap), never rendered
+    /// legibly — always redacted. Same pattern as `FeedbackCardSkeletonView`.
+    private static let placeholder = Comment(
+        id: UUID(),
+        content: "Placeholder comment body that is long enough to wrap onto a second line at typical widths.",
+        userId: "placeholder",
+        isAdmin: false,
+        createdAt: nil
+    )
+
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("\(Strings.commentsTitle) (\(viewModel.comments.count))")
+            Text(Strings.commentsCount(viewModel.comments.count))
                 .font(.headline)
 
-            if viewModel.isLoadingComments {
-                ProgressView()
-                    .frame(maxWidth: .infinity)
-                    .accessibilityLabel(Strings.accessibilityLoadingComments)
-            } else if viewModel.comments.isEmpty {
-                Text(Strings.commentsEmpty)
-                    .foregroundStyle(.secondary)
-                    .frame(maxWidth: .infinity)
-            } else {
+            if viewModel.isLoadingComments && viewModel.comments.isEmpty {
+                // Ghost rows: the real `CommentRowView` fed placeholder values,
+                // so the transition to loaded content shifts nothing.
+                ForEach(0..<3, id: \.self) { _ in
+                    CommentRowView(comment: Self.placeholder)
+                }
+                .redacted(reason: .placeholder)
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel(Strings.accessibilityLoadingComments)
+            } else if viewModel.comments.isEmpty && viewModel.hasLoadedCommentsOnce {
+                // Gated on a fetch-completed fact, never `isEmpty` alone — a
+                // failed first load renders neither ghosts nor a false
+                // "no comments" claim (the error alert has already fired).
+                CommentsEmptyStateView()
+            } else if !viewModel.comments.isEmpty {
                 ForEach(viewModel.comments) { comment in
-                    CommentRowView(comment: comment)
+                    let projection = translationProjection(for: comment)
+                    CommentRowView(
+                        comment: comment,
+                        translatedText: projection.text,
+                        translationSourceName: projection.sourceName,
+                        isShowingOriginal: viewModel.showOriginalIDs.contains(comment.id),
+                        onToggleTranslation: { viewModel.toggleShowOriginal(comment.id) }
+                    )
                 }
             }
 
@@ -257,9 +454,21 @@ struct FeedbackDetailCommentsView: View {
 
 struct CommentRowView: View {
     let comment: Comment
+    /// Translated projection, `nil` when no translation is cached (defaults keep
+    /// existing call sites — including the skeleton placeholder — source-compatible).
+    var translatedText: String? = nil
+    /// Localized source-language name; `nil` means the affordance is absent.
+    var translationSourceName: String? = nil
+    var isShowingOriginal: Bool = false
+    var onToggleTranslation: (() -> Void)? = nil
 
     @SwiftUI.Environment(\.colorScheme) private var colorScheme
     private var theme: SwiftlyFeedbackTheme { SwiftlyFeedback.theme }
+
+    private var displayedContent: String {
+        if !isShowingOriginal, let translatedText { return translatedText }
+        return comment.content
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
@@ -278,247 +487,19 @@ struct CommentRowView: View {
                 }
             }
 
-            Text(comment.content)
+            Text(displayedContent)
                 .font(.subheadline)
+
+            if let translationSourceName, let onToggleTranslation {
+                TranslationAffordanceView(
+                    sourceLanguageName: translationSourceName,
+                    isShowingOriginal: isShowingOriginal,
+                    onToggle: onToggleTranslation
+                )
+            }
         }
         .padding(.vertical, 4)
         .accessibilityElement(children: .combine)
-    }
-}
-
-struct VoteDialogView: View {
-    @Bindable var viewModel: FeedbackDetailViewModel
-    @SwiftUI.Environment(\.dismiss) private var dismiss
-    @SwiftUI.Environment(\.colorScheme) private var colorScheme
-    #if os(iOS)
-    @SwiftUI.Environment(\.horizontalSizeClass) private var horizontalSizeClass
-    #endif
-
-    private var theme: SwiftlyFeedbackTheme { SwiftlyFeedback.theme }
-
-    private var hasValidEmail: Bool {
-        !viewModel.voteEmail.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-    }
-
-    var body: some View {
-        #if os(macOS)
-        macOSContent
-        #else
-        iOSContent
-        #endif
-    }
-
-    // MARK: - iOS & iPadOS Content
-
-    #if !os(macOS)
-    private var iOSContent: some View {
-        NavigationStack {
-            Form {
-                emailSection
-                notificationSection
-            }
-            .navigationTitle(Strings.voteDialogTitle)
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button(Strings.voteDialogSkip) {
-                        submitAndDismiss(email: nil, notify: false)
-                    }
-                }
-                ToolbarItem(placement: .confirmationAction) {
-                    Button(Strings.voteDialogSubmit) {
-                        submitAndDismiss(
-                            email: viewModel.voteEmail,
-                            notify: viewModel.voteNotifyStatusChange,
-                            subscribeToMailingList: viewModel.voteSubscribeToMailingList,
-                            mailingListEmailTypes: viewModel.buildVoteEmailTypes()
-                        )
-                    }
-                    .fontWeight(.semibold)
-                }
-            }
-            .tint(theme.primaryColor.resolve(for: colorScheme))
-        }
-        .presentationDetents(presentationDetentsForDevice)
-        .presentationDragIndicator(.visible)
-        .presentationCornerRadius(20)
-        .interactiveDismissDisabled(false)
-        .presentationSizing(.form)
-    }
-
-    private var presentationDetentsForDevice: Set<PresentationDetent> {
-        // iPhone: Use height-based detent for compact content
-        // iPad: .form sizing handles it, but provide medium as fallback
-        if horizontalSizeClass == .compact {
-            return [.height(320)]
-        } else {
-            return [.medium]
-        }
-    }
-    #endif
-
-    // MARK: - macOS Content
-
-    #if os(macOS)
-    private var macOSContent: some View {
-        VStack(spacing: 16) {
-            // Header
-            Text(Strings.voteDialogTitle)
-                .font(.headline)
-
-            // Email field
-            VStack(alignment: .leading, spacing: 6) {
-                Text(Strings.voteDialogEmailHeader)
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-
-                TextField(Strings.voteDialogEmailPlaceholder, text: $viewModel.voteEmail)
-                    .textFieldStyle(.roundedBorder)
-                    .textContentType(.emailAddress)
-                    .autocorrectionDisabled()
-
-                Text(Strings.voteDialogEmailFooter)
-                    .font(.caption)
-                    .foregroundStyle(.tertiary)
-            }
-
-            // Notification toggle
-            VStack(alignment: .leading, spacing: 6) {
-                Toggle(isOn: $viewModel.voteNotifyStatusChange) {
-                    Text(Strings.voteDialogNotifyToggle)
-                }
-                .disabled(!hasValidEmail)
-                .onChange(of: viewModel.voteEmail) { _, newValue in
-                    if newValue.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                        viewModel.voteNotifyStatusChange = false
-                    }
-                }
-
-                Text(Strings.voteDialogNotifyDescription)
-                    .font(.caption)
-                    .foregroundStyle(.tertiary)
-            }
-
-            if SwiftlyFeedback.config.showMailingListOptIn && hasValidEmail {
-                Toggle(isOn: $viewModel.voteSubscribeToMailingList) {
-                    Text(Strings.mailingListOptIn)
-                }
-
-                if viewModel.voteSubscribeToMailingList {
-                    Toggle(isOn: $viewModel.voteOperationalEmails) {
-                        Text(Strings.mailingListOperational)
-                    }
-                    .padding(.leading, 20)
-
-                    Toggle(isOn: $viewModel.voteMarketingEmails) {
-                        Text(Strings.mailingListMarketing)
-                    }
-                    .padding(.leading, 20)
-                }
-            }
-
-            Spacer()
-
-            Divider()
-
-            // Button bar (HIG: buttons at bottom, Cancel left, Primary right)
-            HStack {
-                Button(Strings.voteDialogSkip) {
-                    submitAndDismiss(email: nil, notify: false)
-                }
-                .keyboardShortcut(.cancelAction)
-
-                Spacer()
-
-                Button(Strings.voteDialogSubmit) {
-                    submitAndDismiss(
-                        email: viewModel.voteEmail,
-                        notify: viewModel.voteNotifyStatusChange,
-                        subscribeToMailingList: viewModel.voteSubscribeToMailingList,
-                        mailingListEmailTypes: viewModel.buildVoteEmailTypes()
-                    )
-                }
-                .keyboardShortcut(.defaultAction)
-                .buttonStyle(.borderedProminent)
-                .tint(theme.primaryColor.resolve(for: colorScheme))
-            }
-        }
-        .padding(20)
-        .frame(width: 380, height: 300)
-    }
-    #endif
-
-    // MARK: - Shared Sections
-
-    private var emailSection: some View {
-        Section {
-            TextField(Strings.voteDialogEmailPlaceholder, text: $viewModel.voteEmail)
-                .textContentType(.emailAddress)
-                #if !os(macOS)
-                .keyboardType(.emailAddress)
-                .textInputAutocapitalization(.never)
-                #endif
-                .autocorrectionDisabled()
-        } header: {
-            Text(Strings.voteDialogEmailHeader)
-        } footer: {
-            Text(Strings.voteDialogEmailFooter)
-                .font(.footnote)
-                .foregroundStyle(.secondary)
-        }
-    }
-
-    private var notificationSection: some View {
-        Section {
-            Toggle(isOn: $viewModel.voteNotifyStatusChange) {
-                Text(Strings.voteDialogNotifyToggle)
-            }
-            .disabled(!hasValidEmail)
-            .onChange(of: viewModel.voteEmail) { _, newValue in
-                // Auto-disable notification if email is cleared
-                if newValue.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                    viewModel.voteNotifyStatusChange = false
-                }
-            }
-
-            if SwiftlyFeedback.config.showMailingListOptIn && hasValidEmail {
-                Toggle(isOn: $viewModel.voteSubscribeToMailingList) {
-                    Text(Strings.mailingListOptIn)
-                }
-
-                if viewModel.voteSubscribeToMailingList {
-                    Toggle(isOn: $viewModel.voteOperationalEmails) {
-                        Text(Strings.mailingListOperational)
-                    }
-                    .padding(.leading, 20)
-
-                    Toggle(isOn: $viewModel.voteMarketingEmails) {
-                        Text(Strings.mailingListMarketing)
-                    }
-                    .padding(.leading, 20)
-                }
-            }
-        } footer: {
-            Text(Strings.voteDialogNotifyDescription)
-                .font(.footnote)
-                .foregroundStyle(.secondary)
-        }
-    }
-
-    // MARK: - Actions
-
-    private func submitAndDismiss(email: String?, notify: Bool, subscribeToMailingList: Bool? = nil, mailingListEmailTypes: [String]? = nil) {
-        dismiss()
-
-        // Save the email to config for future votes (if a valid email was provided)
-        let trimmedEmail = email?.trimmingCharacters(in: .whitespacesAndNewlines)
-        if let validEmail = trimmedEmail, !validEmail.isEmpty {
-            SwiftlyFeedback.config.userEmail = validEmail
-        }
-
-        Task {
-            await viewModel.submitVote(email: email, notify: notify, subscribeToMailingList: subscribeToMailingList, mailingListEmailTypes: mailingListEmailTypes)
-        }
     }
 }
 
@@ -528,11 +509,18 @@ final class FeedbackDetailViewModel {
     var currentFeedback: Feedback
     var comments: [Comment] = []
     var isLoadingComments = false
+    /// True once a comments fetch has completed successfully — the empty state
+    /// is gated on this, never on `comments.isEmpty` alone.
+    var hasLoadedCommentsOnce = false
     var newCommentText = ""
     var isSubmittingComment = false
     var showingError = false
     var errorMessage: String?
     var hasInvalidApiKey = false
+    /// Items (the feedback id governs title + description + rejection reason
+    /// together; each comment id its own row) toggled back to original-language
+    /// text. Session-scoped: lives exactly as long as this view model, never persisted.
+    var showOriginalIDs: Set<UUID> = []
 
     // Vote dialog state
     var showingVoteDialog = false
@@ -550,6 +538,16 @@ final class FeedbackDetailViewModel {
         self.voteNotifyStatusChange = SwiftlyFeedback.config.voteNotificationDefaultOptIn
     }
 
+    /// Flips one item (the feedback header as a whole, or one comment) between its
+    /// translation and its original text.
+    func toggleShowOriginal(_ id: UUID) {
+        if showOriginalIDs.contains(id) {
+            showOriginalIDs.remove(id)
+        } else {
+            showOriginalIDs.insert(id)
+        }
+    }
+
     func loadComments() async {
         guard let sf = swiftlyFeedback else { return }
         guard !hasInvalidApiKey else { return }
@@ -559,6 +557,7 @@ final class FeedbackDetailViewModel {
 
         do {
             comments = try await sf.getComments(for: currentFeedback.id)
+            hasLoadedCommentsOnce = true
         } catch let error as SwiftlyFeedbackError where error == .invalidApiKey {
             hasInvalidApiKey = true
         } catch SwiftlyFeedbackError.feedbackLimitReached(let message) {
