@@ -9,10 +9,10 @@ public enum FeedbackSortOption: String, CaseIterable, Sendable {
 
     var localizedName: String {
         switch self {
-        case .votes: return Strings.sortVotes
-        case .newest: return Strings.sortNewest
-        case .oldest: return Strings.sortOldest
-        case .comments: return Strings.sortComments
+        case .votes: return String(localized: .sortVotes)
+        case .newest: return String(localized: .sortNewest)
+        case .oldest: return String(localized: .sortOldest)
+        case .comments: return String(localized: .sortComments)
         }
     }
 }

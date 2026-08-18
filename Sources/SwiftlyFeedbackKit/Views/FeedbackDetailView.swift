@@ -58,17 +58,17 @@ public struct FeedbackDetailView: View {
         .toolbar {
             ToolbarItem {
                 ShareLink(item: "\(viewModel.currentFeedback.title)\n\n\(viewModel.currentFeedback.description)") {
-                    Label(Strings.toolbarShare, systemImage: "square.and.arrow.up")
+                    Label(String(localized: .toolbarShare), systemImage: "square.and.arrow.up")
                 }
             }
             #if os(macOS)
             if config.showCommentSection {
                 ToolbarItem {
-                    Button(Strings.toolbarRefresh, systemImage: "arrow.clockwise") {
+                    Button(String(localized: .toolbarRefresh), systemImage: "arrow.clockwise") {
                         Task { await viewModel.loadComments() }
                     }
                     .keyboardShortcut("r", modifiers: .command)
-                    .help(Strings.toolbarRefresh)
+                    .help(String(localized: .toolbarRefresh))
                 }
             }
             #endif
@@ -96,10 +96,10 @@ public struct FeedbackDetailView: View {
                 SwiftlyFeedback.view(.feedbackDetail, properties: ["feedbackId": feedback.id.uuidString])
             }
         }
-        .alert(Strings.errorTitle, isPresented: $viewModel.showingError) {
-            Button(Strings.errorOK, role: .cancel) {}
+        .alert(String(localized: .errorTitle), isPresented: $viewModel.showingError) {
+            Button(String(localized: .errorOk), role: .cancel) {}
         } message: {
-            Text(viewModel.errorMessage ?? Strings.errorGeneric)
+            Text(viewModel.errorMessage ?? String(localized: .errorGeneric))
         }
         .sheet(isPresented: $viewModel.showingVoteDialog) {
             VoteDialogView(
@@ -245,7 +245,7 @@ struct FeedbackDetailHeaderView: View {
                     HStack(spacing: 4) {
                         Image(systemName: "xmark.circle.fill")
                             .font(.caption)
-                        Text(Strings.rejectionReasonTitle)
+                        Text(String(localized: .rejectionReasonTitle))
                             .font(.caption)
                             .fontWeight(.semibold)
                     }
@@ -260,11 +260,11 @@ struct FeedbackDetailHeaderView: View {
                 .background(Color.red.opacity(0.1))
                 .clipShape(RoundedRectangle(cornerRadius: 8))
                 .accessibilityElement(children: .combine)
-                .accessibilityLabel(Strings.accessibilityRejectionReason(displayedRejectionReason(reason)))
+                .accessibilityLabel(String(localized: .accessibilityRejectionReason(displayedRejectionReason(reason))))
             }
 
             if let createdAt = feedback.createdAt {
-                Text(String(format: Strings.feedbackSubmitted, createdAt.formatted(date: .abbreviated, time: .shortened)))
+                Text(String(localized: .feedbackDetailSubmitted(createdAt.formatted(date: .abbreviated, time: .shortened))))
                     .font(.caption)
                     .foregroundStyle(.tertiary)
             }
@@ -331,8 +331,8 @@ struct FeedbackDetailVoteView: View {
                 }
 
                 Text(viewModel.currentFeedback.hasVoted
-                     ? Strings.votedButton
-                     : Strings.voteButton)
+                     ? String(localized: .buttonVoted)
+                     : String(localized: .buttonVote))
                     .font(.subheadline)
                     .fontWeight(.medium)
                     .foregroundStyle(foregroundColor)
@@ -350,14 +350,14 @@ struct FeedbackDetailVoteView: View {
         }
         .buttonStyle(.plain)
         .disabled(isDisabled)
-        .accessibilityLabel(Strings.accessibilityVoteCount(viewModel.currentFeedback.voteCount))
-        .accessibilityValue(viewModel.currentFeedback.hasVoted ? Strings.accessibilityVoted : Strings.accessibilityNotVoted)
+        .accessibilityLabel(String(localized: .accessibilityVoteCount(viewModel.currentFeedback.voteCount)))
+        .accessibilityValue(viewModel.currentFeedback.hasVoted ? String(localized: .accessibilityVoted) : String(localized: .accessibilityNotVoted))
         .accessibilityHint(
             !viewModel.currentFeedback.status.canVote
-                ? Strings.accessibilityVotingClosed
+                ? String(localized: .accessibilityVotingClosed)
                 : viewModel.currentFeedback.hasVoted
-                    ? Strings.accessibilityUnvoteHint
-                    : Strings.accessibilityVoteHint
+                    ? String(localized: .accessibilityUnvoteHint)
+                    : String(localized: .accessibilityVoteHint)
         )
     }
 }
@@ -401,7 +401,7 @@ struct FeedbackDetailCommentsView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text(Strings.commentsCount(viewModel.comments.count))
+            Text(String(localized: .commentsCount(viewModel.comments.count)))
                 .font(.headline)
 
             if viewModel.isLoadingComments && viewModel.comments.isEmpty {
@@ -412,7 +412,7 @@ struct FeedbackDetailCommentsView: View {
                 }
                 .redacted(reason: .placeholder)
                 .accessibilityElement(children: .ignore)
-                .accessibilityLabel(Strings.accessibilityLoadingComments)
+                .accessibilityLabel(String(localized: .accessibilityLoadingComments))
             } else if viewModel.comments.isEmpty && viewModel.hasLoadedCommentsOnce {
                 // Gated on a fetch-completed fact, never `isEmpty` alone — a
                 // failed first load renders neither ghosts nor a false
@@ -432,9 +432,9 @@ struct FeedbackDetailCommentsView: View {
             }
 
             HStack {
-                TextField(Strings.addCommentPlaceholder, text: $viewModel.newCommentText)
+                TextField(String(localized: .feedbackDetailCommentsAdd), text: $viewModel.newCommentText)
                     .textFieldStyle(.roundedBorder)
-                    .accessibilityLabel(Strings.accessibilityAddComment)
+                    .accessibilityLabel(String(localized: .accessibilityAddComment))
 
                 Button {
                     Task { await viewModel.submitComment() }
@@ -443,7 +443,7 @@ struct FeedbackDetailCommentsView: View {
                 }
                 .tint(theme.primaryColor.resolve(for: colorScheme))
                 .disabled(viewModel.newCommentText.isEmpty || viewModel.isSubmittingComment)
-                .accessibilityLabel(Strings.accessibilityPostComment)
+                .accessibilityLabel(String(localized: .accessibilityPostComment))
             }
         }
         .padding()
@@ -473,7 +473,7 @@ struct CommentRowView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
             HStack {
-                Text(comment.isAdmin ? Strings.commentAuthorTeam : Strings.commentAuthorUser)
+                Text(comment.isAdmin ? String(localized: .commentAuthorTeam) : String(localized: .commentAuthorUser))
                     .font(.caption)
                     .bold()
                     .foregroundStyle(comment.isAdmin ? theme.primaryColor.resolve(for: colorScheme) : .secondary)
@@ -561,7 +561,7 @@ final class FeedbackDetailViewModel {
         } catch let error as SwiftlyFeedbackError where error == .invalidApiKey {
             hasInvalidApiKey = true
         } catch SwiftlyFeedbackError.feedbackLimitReached(let message) {
-            errorMessage = message ?? Strings.errorFeedbackLimitMessage
+            errorMessage = message ?? String(localized: .errorFeedbackLimitMessage)
             showingError = true
         } catch {
             errorMessage = error.localizedDescription
@@ -649,7 +649,7 @@ final class FeedbackDetailViewModel {
         } catch let error as SwiftlyFeedbackError where error == .invalidApiKey {
             hasInvalidApiKey = true
         } catch SwiftlyFeedbackError.feedbackLimitReached(let message) {
-            errorMessage = message ?? Strings.errorFeedbackLimitMessage
+            errorMessage = message ?? String(localized: .errorFeedbackLimitMessage)
             showingError = true
         } catch {
             errorMessage = error.localizedDescription
@@ -671,7 +671,7 @@ final class FeedbackDetailViewModel {
         } catch let error as SwiftlyFeedbackError where error == .invalidApiKey {
             hasInvalidApiKey = true
         } catch SwiftlyFeedbackError.feedbackLimitReached(let message) {
-            errorMessage = message ?? Strings.errorFeedbackLimitMessage
+            errorMessage = message ?? String(localized: .errorFeedbackLimitMessage)
             showingError = true
         } catch {
             errorMessage = error.localizedDescription

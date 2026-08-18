@@ -59,11 +59,11 @@ public struct FeedbackListView: View {
                 text: $viewModel.searchText,
                 tokens: $viewModel.searchTokens,
                 suggestedTokens: .constant(viewModel.suggestedTokens),
-                prompt: Text(Strings.searchPrompt)
+                prompt: Text(String(localized: .searchPrompt))
             ) { token in
                 Label(token.displayName, systemImage: token.iconName)
             }
-            .navigationTitle(Strings.feedbackListTitle)
+            .navigationTitle(String(localized: .feedbackListTitle))
             .toolbar {
                 if !viewModel.hasInvalidApiKey {
                     #if os(macOS)
@@ -75,7 +75,7 @@ public struct FeedbackListView: View {
                         }
                         .disabled(viewModel.state == .loading || viewModel.isRefreshing)
                         .keyboardShortcut("r", modifiers: .command)
-                        .help(Strings.toolbarRefresh)
+                        .help(String(localized: .toolbarRefresh))
                     }
                     #endif
 
@@ -87,7 +87,7 @@ public struct FeedbackListView: View {
                                     Text(option.localizedName).tag(option)
                                 }
                             } label: {
-                                Label(Strings.toolbarSort, systemImage: "arrow.up.arrow.down")
+                                Label(String(localized: .toolbarSort), systemImage: "arrow.up.arrow.down")
                             }
 
                             // Status filter (if enabled)
@@ -95,18 +95,18 @@ public struct FeedbackListView: View {
                                 Divider()
 
                                 Picker(selection: $viewModel.selectedStatus) {
-                                    Text(Strings.filterAll).tag(FeedbackStatus?.none)
+                                    Text(String(localized: .filterAll)).tag(FeedbackStatus?.none)
                                     ForEach(FeedbackStatus.allCases, id: \.self) { status in
                                         Text(status.localizedDisplayName).tag(FeedbackStatus?.some(status))
                                     }
                                 } label: {
-                                    Label(Strings.toolbarStatus, systemImage: "line.3.horizontal.decrease.circle")
+                                    Label(String(localized: .toolbarStatus), systemImage: "line.3.horizontal.decrease.circle")
                                 }
                             }
                         } label: {
                             // Authored name: the menu contains both sort and filter,
                             // so it is named for both — never a "More…"-family default.
-                            Label(Strings.toolbarSortAndFilter, systemImage: "line.3.horizontal.decrease.circle")
+                            Label(String(localized: .toolbarSortAndFilter), systemImage: "line.3.horizontal.decrease.circle")
                         }
                     }
 
@@ -121,16 +121,16 @@ public struct FeedbackListView: View {
                             } label: {
                                 Image(systemName: "plus")
                             }
-                            .accessibilityLabel(Strings.submitFeedbackTitle)
+                            .accessibilityLabel(String(localized: .feedbackSubmitTitle))
                             .tint(theme.primaryColor.resolve(for: colorScheme))
                         }
                     }
                 }
             }
-            .alert(Strings.feedbackSubmissionDisabledTitle, isPresented: $viewModel.showingSubmissionDisabledAlert) {
-                Button(Strings.errorOK, role: .cancel) {}
+            .alert(String(localized: .feedbackSubmissionDisabledTitle), isPresented: $viewModel.showingSubmissionDisabledAlert) {
+                Button(String(localized: .errorOk), role: .cancel) {}
             } message: {
-                Text(config.feedbackSubmissionDisabledMessage ?? Strings.feedbackSubmissionDisabledMessage)
+                Text(config.feedbackSubmissionDisabledMessage ?? String(localized: .feedbackSubmissionDisabledMessage))
             }
             .sheet(isPresented: $viewModel.showingSubmitSheet) {
                 SubmitFeedbackView(swiftlyFeedback: viewModel.swiftlyFeedback) {
@@ -161,10 +161,10 @@ public struct FeedbackListView: View {
                     SwiftlyFeedback.view(.feedbackList)
                 }
             }
-            .alert(Strings.errorTitle, isPresented: $viewModel.showingError) {
-                Button(Strings.errorOK, role: .cancel) {}
+            .alert(String(localized: .errorTitle), isPresented: $viewModel.showingError) {
+                Button(String(localized: .errorOk), role: .cancel) {}
             } message: {
-                Text(viewModel.errorMessage ?? Strings.errorGeneric)
+                Text(viewModel.errorMessage ?? String(localized: .errorGeneric))
             }
             .sheet(isPresented: $viewModel.showingVoteDialog) {
                 VoteDialogView(
@@ -215,11 +215,11 @@ struct FeedbackEmptyStateView: View {
 
     var body: some View {
         ContentUnavailableView {
-            Label(Strings.feedbackListEmpty, systemImage: "bubble.left.and.bubble.right")
+            Label(String(localized: .feedbackListEmpty), systemImage: "bubble.left.and.bubble.right")
         } description: {
-            Text(Strings.feedbackListEmptyDescription)
+            Text(String(localized: .feedbackListEmptyDescription))
         } actions: {
-            Button(Strings.submitFeedbackTitle) {
+            Button(String(localized: .feedbackSubmitTitle)) {
                 if config.allowFeedbackSubmission {
                     onSubmit()
                 } else {
@@ -290,7 +290,7 @@ struct FeedbackListContentView: View {
                     .buttonStyle(.plain)
                     .accessibilityElement(children: .ignore)
                     .accessibilityLabel(cardView.accessibilityDescription)
-                    .accessibilityHint(Strings.accessibilityViewDetails)
+                    .accessibilityHint(String(localized: .accessibilityViewDetails))
 
                     // `children: .ignore` hides the affordance's inner Button from
                     // VoiceOver, so the toggle is re-exposed as a named rotor action
@@ -298,7 +298,7 @@ struct FeedbackListContentView: View {
                     Group {
                         if projection.sourceName != nil {
                             link.accessibilityAction(
-                                named: isShowingOriginal ? Strings.showTranslation : Strings.showOriginal
+                                named: isShowingOriginal ? String(localized: .translationShowTranslation) : String(localized: .translationShowOriginal)
                             ) {
                                 viewModel.toggleShowOriginal(feedback.id)
                             }
@@ -487,7 +487,7 @@ final class FeedbackListViewModel {
             } catch SwiftlyFeedbackError.feedbackLimitReached(let message) {
                 // Never "Something went wrong" for the limit: the upgrade message
                 // rides .failed on initial load, the alert on populated refresh.
-                handleLoadFailure(message ?? Strings.errorFeedbackLimitMessage)
+                handleLoadFailure(message ?? String(localized: .errorFeedbackLimitMessage))
             } catch {
                 handleLoadFailure(error.localizedDescription)
             }
@@ -602,7 +602,7 @@ final class FeedbackListViewModel {
         } catch let error as SwiftlyFeedbackError where error == .invalidApiKey {
             hasInvalidApiKey = true
         } catch SwiftlyFeedbackError.feedbackLimitReached(let message) {
-            errorMessage = message ?? Strings.errorFeedbackLimitMessage
+            errorMessage = message ?? String(localized: .errorFeedbackLimitMessage)
             showingError = true
         } catch {
             errorMessage = error.localizedDescription

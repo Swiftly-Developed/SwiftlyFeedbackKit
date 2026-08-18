@@ -30,13 +30,13 @@ public struct SubmitFeedbackView: View {
                     formContent
                 }
             }
-            .navigationTitle(Strings.submitFeedbackTitle)
+            .navigationTitle(String(localized: .feedbackSubmitTitle))
             #if os(iOS)
             .navigationBarTitleDisplayMode(.inline)
             #endif
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button(Strings.cancelButton) {
+                    Button(String(localized: .buttonCancel)) {
                         dismiss()
                         onDismiss()
                     }
@@ -47,10 +47,10 @@ public struct SubmitFeedbackView: View {
                     }
                 }
             }
-            .alert(Strings.errorTitle, isPresented: $viewModel.showingError) {
-                Button(Strings.errorOK, role: .cancel) {}
+            .alert(String(localized: .errorTitle), isPresented: $viewModel.showingError) {
+                Button(String(localized: .errorOk), role: .cancel) {}
             } message: {
-                Text(viewModel.errorMessage ?? Strings.errorGeneric)
+                Text(viewModel.errorMessage ?? String(localized: .errorGeneric))
             }
             .overlay {
                 if viewModel.isSubmitting {
@@ -59,7 +59,7 @@ public struct SubmitFeedbackView: View {
                         .padding()
                         .background(.regularMaterial)
                         .clipShape(.rect(cornerRadius: 12))
-                        .accessibilityLabel(Strings.accessibilitySubmitting)
+                        .accessibilityLabel(String(localized: .accessibilitySubmitting))
                 }
             }
             .onAppear {
@@ -90,13 +90,13 @@ public struct SubmitFeedbackView: View {
     private var iOSForm: some View {
         Form {
             Section {
-                TextField(Strings.formTitle, text: $viewModel.title)
+                TextField(String(localized: .feedbackFormTitle), text: $viewModel.title)
                     .focused($focusedField, equals: .title)
                     .submitLabel(.next)
                     .onSubmit { focusedField = .description }
-                    .accessibilityHint(Strings.accessibilityFormRequired)
+                    .accessibilityHint(String(localized: .accessibilityFormRequired))
 
-                Picker(Strings.formCategory, selection: $viewModel.category) {
+                Picker(String(localized: .feedbackFormCategory), selection: $viewModel.category) {
                     ForEach(FeedbackCategory.allCases, id: \.self) { category in
                         Label(category.localizedDisplayName, systemImage: category.iconName)
                             .tag(category)
@@ -109,10 +109,10 @@ public struct SubmitFeedbackView: View {
                 TextEditor(text: $viewModel.description)
                     .focused($focusedField, equals: .description)
                     .frame(minHeight: 120)
-                    .accessibilityLabel(Strings.formDescription)
-                    .accessibilityHint(Strings.accessibilityFormDescriptionHint)
+                    .accessibilityLabel(String(localized: .feedbackFormDescription))
+                    .accessibilityHint(String(localized: .accessibilityFormDescriptionHint))
             } header: {
-                Text(Strings.formDescription)
+                Text(String(localized: .feedbackFormDescription))
             } footer: {
                 if let unmetRequirement = viewModel.unmetRequirement {
                     Text(unmetRequirement)
@@ -123,7 +123,7 @@ public struct SubmitFeedbackView: View {
 
             if config.showEmailField {
                 Section {
-                    TextField(Strings.formEmailPlaceholder, text: $viewModel.email)
+                    TextField(String(localized: .feedbackFormEmailPlaceholder), text: $viewModel.email)
                         .focused($focusedField, equals: .email)
                         .textContentType(.emailAddress)
                         .keyboardType(.emailAddress)
@@ -131,22 +131,22 @@ public struct SubmitFeedbackView: View {
                         .autocorrectionDisabled()
                         .submitLabel(.done)
                         .onSubmit { submitIfValid() }
-                        .accessibilityHint(Strings.accessibilityFormOptional)
+                        .accessibilityHint(String(localized: .accessibilityFormOptional))
 
                     if config.showMailingListOptIn && !viewModel.email.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                        Toggle(Strings.mailingListOptIn, isOn: $viewModel.subscribeToMailingList)
+                        Toggle(String(localized: .mailingListOptIn), isOn: $viewModel.subscribeToMailingList)
 
                         if viewModel.subscribeToMailingList {
-                            Toggle(Strings.mailingListOperational, isOn: $viewModel.operationalEmails)
+                            Toggle(String(localized: .mailingListOperational), isOn: $viewModel.operationalEmails)
                                 .padding(.leading, 20)
-                            Toggle(Strings.mailingListMarketing, isOn: $viewModel.marketingEmails)
+                            Toggle(String(localized: .mailingListMarketing), isOn: $viewModel.marketingEmails)
                                 .padding(.leading, 20)
                         }
                     }
                 } header: {
-                    Text(Strings.formEmail)
+                    Text(String(localized: .feedbackFormEmail))
                 } footer: {
-                    Text(Strings.formEmailFooter)
+                    Text(String(localized: .feedbackFormEmailFooter))
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
@@ -168,18 +168,18 @@ public struct SubmitFeedbackView: View {
         VStack(spacing: 0) {
             Grid(alignment: .leadingFirstTextBaseline, horizontalSpacing: 12, verticalSpacing: 16) {
                 GridRow {
-                    Text("\(Strings.formTitle):")
+                    Text("\(String(localized: .feedbackFormTitle)):")
                         .gridColumnAlignment(.trailing)
-                    TextField(Strings.formTitlePlaceholder, text: $viewModel.title)
+                    TextField(String(localized: .feedbackFormTitlePlaceholder), text: $viewModel.title)
                         .focused($focusedField, equals: .title)
                         .textFieldStyle(.roundedBorder)
                         .onSubmit { focusedField = .description }
-                        .accessibilityLabel(Strings.formTitle)
-                        .accessibilityHint(Strings.accessibilityFormRequired)
+                        .accessibilityLabel(String(localized: .feedbackFormTitle))
+                        .accessibilityHint(String(localized: .accessibilityFormRequired))
                 }
 
                 GridRow {
-                    Text("\(Strings.formCategory):")
+                    Text("\(String(localized: .feedbackFormCategory)):")
                     Picker("", selection: $viewModel.category) {
                         ForEach(FeedbackCategory.allCases, id: \.self) { category in
                             Text(category.localizedDisplayName).tag(category)
@@ -191,7 +191,7 @@ public struct SubmitFeedbackView: View {
                 }
 
                 GridRow(alignment: .top) {
-                    Text("\(Strings.formDescription):")
+                    Text("\(String(localized: .feedbackFormDescription)):")
                     TextEditor(text: $viewModel.description)
                         .focused($focusedField, equals: .description)
                         .font(.body)
@@ -204,22 +204,22 @@ public struct SubmitFeedbackView: View {
                             RoundedRectangle(cornerRadius: 5)
                                 .stroke(Color(nsColor: .separatorColor), lineWidth: 0.5)
                         )
-                        .accessibilityLabel(Strings.formDescription)
-                        .accessibilityHint(Strings.accessibilityFormDescriptionHint)
+                        .accessibilityLabel(String(localized: .feedbackFormDescription))
+                        .accessibilityHint(String(localized: .accessibilityFormDescriptionHint))
                 }
 
                 if config.showEmailField {
                     GridRow {
-                        Text("\(Strings.formEmail):")
+                        Text("\(String(localized: .feedbackFormEmail)):")
                         VStack(alignment: .leading, spacing: 4) {
-                            TextField(Strings.formEmailPlaceholder, text: $viewModel.email)
+                            TextField(String(localized: .feedbackFormEmailPlaceholder), text: $viewModel.email)
                                 .focused($focusedField, equals: .email)
                                 .textFieldStyle(.roundedBorder)
                                 .textContentType(.emailAddress)
                                 .onSubmit { submitIfValid() }
-                                .accessibilityLabel(Strings.formEmail)
-                                .accessibilityHint(Strings.accessibilityFormOptional)
-                            Text(Strings.formEmailFooter)
+                                .accessibilityLabel(String(localized: .feedbackFormEmail))
+                                .accessibilityHint(String(localized: .accessibilityFormOptional))
+                            Text(String(localized: .feedbackFormEmailFooter))
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
                         }
@@ -228,18 +228,18 @@ public struct SubmitFeedbackView: View {
                     if config.showMailingListOptIn && !viewModel.email.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                         GridRow {
                             Text("")
-                            Toggle(Strings.mailingListOptIn, isOn: $viewModel.subscribeToMailingList)
+                            Toggle(String(localized: .mailingListOptIn), isOn: $viewModel.subscribeToMailingList)
                         }
 
                         if viewModel.subscribeToMailingList {
                             GridRow {
                                 Text("")
-                                Toggle(Strings.mailingListOperational, isOn: $viewModel.operationalEmails)
+                                Toggle(String(localized: .mailingListOperational), isOn: $viewModel.operationalEmails)
                                     .padding(.leading, 20)
                             }
                             GridRow {
                                 Text("")
-                                Toggle(Strings.mailingListMarketing, isOn: $viewModel.marketingEmails)
+                                Toggle(String(localized: .mailingListMarketing), isOn: $viewModel.marketingEmails)
                                     .padding(.leading, 20)
                             }
                         }
@@ -269,20 +269,20 @@ public struct SubmitFeedbackView: View {
             submitIfValid()
         } label: {
             #if os(macOS)
-            Text(Strings.submitButton)
+            Text(String(localized: .buttonSubmit))
             #else
             if viewModel.isSubmitting {
                 // S1: action progress (submit in flight), not a content load — the spinner is the mandated treatment.
                 ProgressView()
                     .controlSize(.small)
             } else {
-                Text(Strings.submitButton)
+                Text(String(localized: .buttonSubmit))
             }
             #endif
         }
         .tint(theme.primaryColor.resolve(for: colorScheme))
         .disabled(!viewModel.isValid || viewModel.isSubmitting)
-        .accessibilityHint(viewModel.isValid ? Strings.accessibilitySubmitHint : (viewModel.unmetRequirement ?? Strings.accessibilitySubmitDisabledHint))
+        .accessibilityHint(viewModel.isValid ? String(localized: .accessibilitySubmitHint) : (viewModel.unmetRequirement ?? String(localized: .accessibilitySubmitDisabledHint)))
         #if os(macOS)
         .keyboardShortcut(.return, modifiers: .command)
         #endif
@@ -328,10 +328,10 @@ final class SubmitFeedbackViewModel {
     /// the form and read by VoiceOver on the submit button's hint.
     var unmetRequirement: String? {
         if title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-            return Strings.formValidationTitleRequired
+            return String(localized: .feedbackFormValidationTitleRequired)
         }
         if description.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-            return Strings.formValidationDescriptionRequired
+            return String(localized: .feedbackFormValidationDescriptionRequired)
         }
         return nil
     }
@@ -364,7 +364,7 @@ final class SubmitFeedbackViewModel {
         } catch let error as SwiftlyFeedbackError where error == .invalidApiKey {
             hasInvalidApiKey = true
         } catch SwiftlyFeedbackError.feedbackLimitReached(let message) {
-            errorMessage = message ?? Strings.errorFeedbackLimitMessage
+            errorMessage = message ?? String(localized: .errorFeedbackLimitMessage)
             showingError = true
         } catch {
             errorMessage = error.localizedDescription

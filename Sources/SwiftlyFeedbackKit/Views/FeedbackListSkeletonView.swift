@@ -17,7 +17,7 @@ struct FeedbackListSkeletonView: View {
             .padding()
         }
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel(Strings.accessibilityLoadingFeedback)
+        .accessibilityLabel(String(localized: .accessibilityLoadingFeedback))
     }
 }
 

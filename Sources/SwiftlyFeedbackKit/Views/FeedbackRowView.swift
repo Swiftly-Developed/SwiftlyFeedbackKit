@@ -52,19 +52,19 @@ struct FeedbackCardView: View {
         parts.append(displayedTitle)
         parts.append(displayedDescription)
         if isShowingTranslation, let translationSourceName {
-            parts.append(Strings.translatedFrom(translationSourceName))
+            parts.append(String(localized: .translationTranslatedFrom(translationSourceName)))
         }
         if config.showStatusBadge {
-            parts.append(Strings.accessibilityStatus(feedback.status.localizedDisplayName))
+            parts.append(String(localized: .accessibilityStatus(feedback.status.localizedDisplayName)))
         }
         if config.showCategoryBadge {
-            parts.append(Strings.accessibilityCategory(feedback.category.localizedDisplayName))
+            parts.append(String(localized: .accessibilityCategory(feedback.category.localizedDisplayName)))
         }
         if config.showVoteCount {
-            parts.append(Strings.accessibilityVoteCount(feedback.voteCount))
+            parts.append(String(localized: .accessibilityVoteCount(feedback.voteCount)))
         }
         if feedback.commentCount > 0 && config.showCommentSection {
-            parts.append(Strings.accessibilityCommentCount(feedback.commentCount))
+            parts.append(String(localized: .accessibilityCommentCount(feedback.commentCount)))
         }
         return parts.joined(separator: ", ")
     }
@@ -136,7 +136,7 @@ struct FeedbackRowMetadataView: View {
                 Label("\(feedback.commentCount)", systemImage: "bubble.right")
                     .font(.caption)
                     .foregroundStyle(.secondary)
-                    .accessibilityLabel(Strings.accessibilityCommentCount(feedback.commentCount))
+                    .accessibilityLabel(String(localized: .accessibilityCommentCount(feedback.commentCount)))
             }
         }
         .padding(.top, 4)
@@ -185,11 +185,11 @@ struct VoteButton: View {
 
     private var accessibilityHintText: String {
         if !status.canVote {
-            return Strings.accessibilityVotingClosed
+            return String(localized: .accessibilityVotingClosed)
         } else if hasVoted {
-            return Strings.accessibilityUnvoteHint
+            return String(localized: .accessibilityUnvoteHint)
         } else {
-            return Strings.accessibilityVoteHint
+            return String(localized: .accessibilityVoteHint)
         }
     }
 
@@ -214,8 +214,8 @@ struct VoteButton: View {
         }
         .buttonStyle(.plain)
         .disabled(isDisabled)
-        .accessibilityLabel(Strings.accessibilityVoteCount(voteCount))
-        .accessibilityValue(hasVoted ? Strings.accessibilityVoted : Strings.accessibilityNotVoted)
+        .accessibilityLabel(String(localized: .accessibilityVoteCount(voteCount)))
+        .accessibilityValue(hasVoted ? String(localized: .accessibilityVoted) : String(localized: .accessibilityNotVoted))
         .accessibilityHint(accessibilityHintText)
     }
 }
@@ -240,7 +240,7 @@ struct StatusBadge: View {
             .background(statusColor.opacity(0.2))
             .foregroundStyle(statusColor)
             .clipShape(.capsule)
-            .accessibilityLabel(Strings.accessibilityStatus(status.localizedDisplayName))
+            .accessibilityLabel(String(localized: .accessibilityStatus(status.localizedDisplayName)))
     }
 }
 
@@ -263,6 +263,6 @@ struct CategoryBadge: View {
             .background(categoryColor.opacity(0.15))
             .foregroundStyle(categoryColor)
             .clipShape(.capsule)
-            .accessibilityLabel(Strings.accessibilityCategory(category.localizedDisplayName))
+            .accessibilityLabel(String(localized: .accessibilityCategory(category.localizedDisplayName)))
     }
 }

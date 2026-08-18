@@ -43,16 +43,16 @@ struct VoteDialogView: View {
                 emailSection
                 notificationSection
             }
-            .navigationTitle(Strings.voteDialogTitle)
+            .navigationTitle(String(localized: .voteDialogTitle))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button(Strings.voteDialogSkip) {
+                    Button(String(localized: .voteDialogSkip)) {
                         submitAndDismiss(email: nil, notify: false)
                     }
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button(Strings.voteDialogSubmit) {
+                    Button(String(localized: .voteDialogSubmit)) {
                         submitAndDismiss(
                             email: email,
                             notify: notifyStatusChange,
@@ -89,22 +89,22 @@ struct VoteDialogView: View {
     private var macOSContent: some View {
         VStack(spacing: 16) {
             // Header
-            Text(Strings.voteDialogTitle)
+            Text(String(localized: .voteDialogTitle))
                 .font(.headline)
 
             // Email field
             VStack(alignment: .leading, spacing: 6) {
-                Text(Strings.voteDialogEmailHeader)
+                Text(String(localized: .voteDialogEmailHeader))
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
 
-                TextField(Strings.voteDialogEmailPlaceholder, text: $email)
+                TextField(String(localized: .voteDialogEmailPlaceholder), text: $email)
                     .textFieldStyle(.roundedBorder)
                     .textContentType(.emailAddress)
                     .autocorrectionDisabled()
-                    .accessibilityLabel(Strings.voteDialogEmailHeader)
+                    .accessibilityLabel(String(localized: .voteDialogEmailHeader))
 
-                Text(Strings.voteDialogEmailFooter)
+                Text(String(localized: .voteDialogEmailFooter))
                     .font(.caption)
                     .foregroundStyle(.tertiary)
             }
@@ -112,38 +112,38 @@ struct VoteDialogView: View {
             // Notification toggle
             VStack(alignment: .leading, spacing: 6) {
                 Toggle(isOn: $notifyStatusChange) {
-                    Text(Strings.voteDialogNotifyToggle)
+                    Text(String(localized: .voteDialogNotifyToggle))
                 }
                 .disabled(!hasValidEmail)
-                .accessibilityHint(Strings.accessibilityVoteDialogNotifyHint)
+                .accessibilityHint(String(localized: .accessibilityVoteDialogNotifyHint))
                 .onChange(of: email) { _, newValue in
                     if newValue.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                         notifyStatusChange = false
                     }
                 }
 
-                Text(Strings.voteDialogNotifyDescription)
+                Text(String(localized: .voteDialogNotifyDescription))
                     .font(.caption)
                     .foregroundStyle(.tertiary)
             }
 
             if SwiftlyFeedback.config.showMailingListOptIn && hasValidEmail {
                 Toggle(isOn: $subscribeToMailingList) {
-                    Text(Strings.mailingListOptIn)
+                    Text(String(localized: .mailingListOptIn))
                 }
 
                 if subscribeToMailingList {
                     Toggle(isOn: $operationalEmails) {
-                        Text(Strings.mailingListOperational)
+                        Text(String(localized: .mailingListOperational))
                     }
                     .padding(.leading, 20)
-                    .accessibilityHint(Strings.accessibilityMailingListOperationalHint)
+                    .accessibilityHint(String(localized: .accessibilityMailingListOperationalHint))
 
                     Toggle(isOn: $marketingEmails) {
-                        Text(Strings.mailingListMarketing)
+                        Text(String(localized: .mailingListMarketing))
                     }
                     .padding(.leading, 20)
-                    .accessibilityHint(Strings.accessibilityMailingListMarketingHint)
+                    .accessibilityHint(String(localized: .accessibilityMailingListMarketingHint))
                 }
             }
 
@@ -153,14 +153,14 @@ struct VoteDialogView: View {
 
             // Button bar (HIG: buttons at bottom, Cancel left, Primary right)
             HStack {
-                Button(Strings.voteDialogSkip) {
+                Button(String(localized: .voteDialogSkip)) {
                     submitAndDismiss(email: nil, notify: false)
                 }
                 .keyboardShortcut(.cancelAction)
 
                 Spacer()
 
-                Button(Strings.voteDialogSubmit) {
+                Button(String(localized: .voteDialogSubmit)) {
                     submitAndDismiss(
                         email: email,
                         notify: notifyStatusChange,
@@ -182,18 +182,18 @@ struct VoteDialogView: View {
 
     private var emailSection: some View {
         Section {
-            TextField(Strings.voteDialogEmailPlaceholder, text: $email)
+            TextField(String(localized: .voteDialogEmailPlaceholder), text: $email)
                 .textContentType(.emailAddress)
                 #if !os(macOS)
                 .keyboardType(.emailAddress)
                 .textInputAutocapitalization(.never)
                 #endif
                 .autocorrectionDisabled()
-                .accessibilityLabel(Strings.voteDialogEmailHeader)
+                .accessibilityLabel(String(localized: .voteDialogEmailHeader))
         } header: {
-            Text(Strings.voteDialogEmailHeader)
+            Text(String(localized: .voteDialogEmailHeader))
         } footer: {
-            Text(Strings.voteDialogEmailFooter)
+            Text(String(localized: .voteDialogEmailFooter))
                 .font(.footnote)
                 .foregroundStyle(.secondary)
         }
@@ -202,10 +202,10 @@ struct VoteDialogView: View {
     private var notificationSection: some View {
         Section {
             Toggle(isOn: $notifyStatusChange) {
-                Text(Strings.voteDialogNotifyToggle)
+                Text(String(localized: .voteDialogNotifyToggle))
             }
             .disabled(!hasValidEmail)
-            .accessibilityHint(Strings.accessibilityVoteDialogNotifyHint)
+            .accessibilityHint(String(localized: .accessibilityVoteDialogNotifyHint))
             .onChange(of: email) { _, newValue in
                 // Auto-disable notification if email is cleared
                 if newValue.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
@@ -215,25 +215,25 @@ struct VoteDialogView: View {
 
             if SwiftlyFeedback.config.showMailingListOptIn && hasValidEmail {
                 Toggle(isOn: $subscribeToMailingList) {
-                    Text(Strings.mailingListOptIn)
+                    Text(String(localized: .mailingListOptIn))
                 }
 
                 if subscribeToMailingList {
                     Toggle(isOn: $operationalEmails) {
-                        Text(Strings.mailingListOperational)
+                        Text(String(localized: .mailingListOperational))
                     }
                     .padding(.leading, 20)
-                    .accessibilityHint(Strings.accessibilityMailingListOperationalHint)
+                    .accessibilityHint(String(localized: .accessibilityMailingListOperationalHint))
 
                     Toggle(isOn: $marketingEmails) {
-                        Text(Strings.mailingListMarketing)
+                        Text(String(localized: .mailingListMarketing))
                     }
                     .padding(.leading, 20)
-                    .accessibilityHint(Strings.accessibilityMailingListMarketingHint)
+                    .accessibilityHint(String(localized: .accessibilityMailingListMarketingHint))
                 }
             }
         } footer: {
-            Text(Strings.voteDialogNotifyDescription)
+            Text(String(localized: .voteDialogNotifyDescription))
                 .font(.footnote)
                 .foregroundStyle(.secondary)
         }

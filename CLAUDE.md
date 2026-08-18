@@ -253,11 +253,22 @@ Follows [Semantic Versioning](https://semver.org/):
 - **MINOR**: New features, backward-compatible additions
 - **PATCH**: Bug fixes, no API changes
 
+> ⚠️ **The next release is a MAJOR bump, and it is owed two CHANGELOG entries.** `LOCALIZATION01`
+> phase 03 **deleted the `public` `Strings` enum** from this package. It was public API in a published
+> library, so its removal is a breaking change under the rule above regardless of there being no
+> in-repo consumer. The same release must also mention the new **`GenerateStringCatalogSymbols`
+> SwiftPM build-tool plugin** (`Plugins/GenerateStringCatalogSymbols`, wired in `Package.swift`),
+> because it changes what a consumer's build *does*: Xcode asks for a one-time confirmation before
+> running a package plugin, and a non-interactive CI consumer needs `-skipPackagePluginValidation`.
+> A *local* package in the same workspace is trusted automatically, which is why this workspace
+> builds green without the flag and an external consumer may not. *(Flagged by phase 03; the bump
+> itself is still owed.)*
+
 ### Release Checklist
 
 1. Update `CHANGELOG.md`
 2. Create git tag: `git tag X.Y.Z`
-3. Push: `git push feedbackkit-sdk X.Y.Z && git push origin X.Y.Z`
+3. Push the tag to the mirror **by URL** (`https://github.com/Swiftly-Developed/SwiftlyFeedbackKit-Swift-SDK.git`) and to `origin` — the remote name `feedbackkit-sdk` is **not configured** in this checkout; run `git remote -v` before assuming it resolves ([`CLAUDE.md`](../CLAUDE.md) → Git Remotes & Branching).
 4. Create GitHub Release with CHANGELOG content
 
 ### SPM Constraints

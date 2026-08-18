@@ -19,19 +19,19 @@ struct TranslationAffordanceView: View {
                 .foregroundStyle(.secondary)
                 .accessibilityHidden(true)
 
-            Text(Strings.translatedFrom(sourceLanguageName))
+            Text(String(localized: .translationTranslatedFrom(sourceLanguageName)))
                 .font(.caption)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.leading)
 
             Spacer(minLength: 8)
 
-            Button(isShowingOriginal ? Strings.showTranslation : Strings.showOriginal) {
+            Button(isShowingOriginal ? String(localized: .translationShowTranslation) : String(localized: .translationShowOriginal)) {
                 onToggle()
             }
             .font(.caption)
             .buttonStyle(.borderless)
-            .accessibilityHint(Strings.accessibilityTranslationToggleHint)
+            .accessibilityHint(String(localized: .accessibilityTranslationToggleHint))
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }

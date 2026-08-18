@@ -733,77 +733,6 @@
         }
       }
     },
-    "feedback.form.description.placeholder": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Provide more details..."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Proporciona más detalles..."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Fournissez plus de détails..."
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Geben Sie weitere Details an..."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "詳細を入力してください..."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "提供更多详情..."
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Forneça mais detalhes..."
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "자세한 내용을 입력하세요..."
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Fornisci più dettagli..."
-          }
-        },
-        "ar": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "قدم المزيد من التفاصيل..."
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Укажите подробности..."
-          }
-        }
-      }
-    },
     "feedback.form.category": {
       "extractionState": "manual",
       "localizations": {
@@ -1274,77 +1203,6 @@
         }
       }
     },
-    "button.send": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Send"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Enviar"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Envoyer"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Senden"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "送信"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "发送"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Enviar"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "보내기"
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Invia"
-          }
-        },
-        "ar": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "إرسال"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Отправить"
-          }
-        }
-      }
-    },
     "button.vote": {
       "extractionState": "manual",
       "localizations": {
@@ -1671,77 +1529,6 @@
         "it": { "stringUnit": { "state": "needs_review", "value": "Ordina e filtra" } },
         "ar": { "stringUnit": { "state": "needs_review", "value": "الترتيب والتصفية" } },
         "ru": { "stringUnit": { "state": "needs_review", "value": "Сортировка и фильтр" } }
-      }
-    },
-    "toolbar.filter": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Filter"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Filtrar"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Filtrer"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Filtern"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "フィルター"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "筛选"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Filtrar"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "필터"
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Filtra"
-          }
-        },
-        "ar": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "تصفية"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Фильтр"
-          }
-        }
       }
     },
     "toolbar.status": {
@@ -2869,7 +2656,7 @@
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "거b됨"
+            "value": "거부됨"
           }
         },
         "it": {
@@ -3602,144 +3389,224 @@
         }
       }
     },
-    "votes.count": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%lld votes"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%lld votos"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%lld votes"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%lld Stimmen"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%lld票"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%lld票"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%lld votos"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%lld표"
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%lld voti"
-          }
-        },
-        "ar": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%lld أصوات"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%lld голосов"
-          }
-        }
-      }
-    },
     "comments.count": {
+      "comment": "Header for the comments section on the feedback detail screen. %lld is the number of comments.",
       "extractionState": "manual",
       "localizations": {
         "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%lld comments"
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld comment"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld comments"
+                }
+              }
+            }
           }
         },
         "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%lld comentarios"
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "needs_review",
+                  "value": "%lld comentario"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "needs_review",
+                  "value": "%lld comentarios"
+                }
+              }
+            }
           }
         },
         "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%lld commentaires"
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "needs_review",
+                  "value": "%lld commentaire"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "needs_review",
+                  "value": "%lld commentaires"
+                }
+              }
+            }
           }
         },
         "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%lld Kommentare"
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "needs_review",
+                  "value": "%lld Kommentar"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "needs_review",
+                  "value": "%lld Kommentare"
+                }
+              }
+            }
           }
         },
         "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%lldコメント"
+          "variations": {
+            "plural": {
+              "other": {
+                "stringUnit": {
+                  "state": "needs_review",
+                  "value": "%lldコメント"
+                }
+              }
+            }
           }
         },
         "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%lld条评论"
+          "variations": {
+            "plural": {
+              "other": {
+                "stringUnit": {
+                  "state": "needs_review",
+                  "value": "%lld条评论"
+                }
+              }
+            }
           }
         },
         "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%lld comentários"
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "needs_review",
+                  "value": "%lld comentário"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "needs_review",
+                  "value": "%lld comentários"
+                }
+              }
+            }
           }
         },
         "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%lld개 댓글"
+          "variations": {
+            "plural": {
+              "other": {
+                "stringUnit": {
+                  "state": "needs_review",
+                  "value": "%lld개 댓글"
+                }
+              }
+            }
           }
         },
         "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%lld commenti"
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "needs_review",
+                  "value": "%lld commento"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "needs_review",
+                  "value": "%lld commenti"
+                }
+              }
+            }
           }
         },
         "ar": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%lld تعليقات"
+          "variations": {
+            "plural": {
+              "zero": {
+                "stringUnit": {
+                  "state": "needs_review",
+                  "value": "%lld تعليق"
+                }
+              },
+              "one": {
+                "stringUnit": {
+                  "state": "needs_review",
+                  "value": "تعليق واحد"
+                }
+              },
+              "two": {
+                "stringUnit": {
+                  "state": "needs_review",
+                  "value": "تعليقان"
+                }
+              },
+              "few": {
+                "stringUnit": {
+                  "state": "needs_review",
+                  "value": "%lld تعليقات"
+                }
+              },
+              "many": {
+                "stringUnit": {
+                  "state": "needs_review",
+                  "value": "%lld تعليقًا"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "needs_review",
+                  "value": "%lld تعليق"
+                }
+              }
+            }
           }
         },
         "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%lld комментариев"
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "needs_review",
+                  "value": "%lld комментарий"
+                }
+              },
+              "few": {
+                "stringUnit": {
+                  "state": "needs_review",
+                  "value": "%lld комментария"
+                }
+              },
+              "many": {
+                "stringUnit": {
+                  "state": "needs_review",
+                  "value": "%lld комментариев"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "needs_review",
+                  "value": "%lld комментария"
+                }
+              }
+            }
           }
         }
       }
@@ -3882,77 +3749,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Система отзывов настроена неправильно. Свяжитесь с разработчиками приложения для помощи."
-          }
-        }
-      }
-    },
-    "error.feedbackLimit.title": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Feedback Limit Reached"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Límite de comentarios alcanzado"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Limite de retours atteinte"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Feedback-Limit erreicht"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "フィードバック上限に達しました"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "反馈数量已达上限"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Limite de feedback atingido"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "피드백 한도 도달"
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Limite feedback raggiunto"
-          }
-        },
-        "ar": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "تم الوصول لحد الملاحظات"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Достигнут лимит отзывов"
           }
         }
       }
@@ -4722,7 +4518,7 @@
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "건b뛰기"
+            "value": "건너뛰기"
           }
         },
         "it": {
@@ -4887,77 +4683,6 @@
         }
       }
     },
-    "mailingList.optIn.description": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Receive product updates and announcements"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Recibir actualizaciones del producto y anuncios"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Recevoir les mises à jour et annonces du produit"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Produktupdates und Ankündigungen erhalten"
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ricevi aggiornamenti e annunci sul prodotto"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Receber atualizações e anúncios do produto"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "製品のアップデートやお知らせを受け取る"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "제품 업데이트 및 공지 수신"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "接收产品更新和公告"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Получать обновления и объявления о продукте"
-          }
-        },
-        "ar": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "تلقي تحديثات المنتج والإعلانات"
-          }
-        }
-      }
-    },
     "mailingList.operational": {
       "extractionState": "manual",
       "localizations": {
@@ -5101,19 +4826,70 @@
       }
     },
     "accessibility.vote.count": {
+      "comment": "VoiceOver announcement for the vote count on a feedback row. %lld is the number of votes.",
       "extractionState": "manual",
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "%lld votes" } },
-        "es": { "stringUnit": { "state": "translated", "value": "%lld votos" } },
-        "fr": { "stringUnit": { "state": "translated", "value": "%lld votes" } },
-        "de": { "stringUnit": { "state": "translated", "value": "%lld Stimmen" } },
-        "ja": { "stringUnit": { "state": "translated", "value": "%lld票" } },
-        "zh-Hans": { "stringUnit": { "state": "translated", "value": "%lld票" } },
-        "pt-BR": { "stringUnit": { "state": "translated", "value": "%lld votos" } },
-        "ko": { "stringUnit": { "state": "translated", "value": "%lld표" } },
-        "it": { "stringUnit": { "state": "translated", "value": "%lld voti" } },
-        "ar": { "stringUnit": { "state": "translated", "value": "%lld صوت" } },
-        "ru": { "stringUnit": { "state": "translated", "value": "%lld голосов" } }
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld vote"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld votes"
+                }
+              }
+            }
+          }
+        },
+        "es": { "variations": { "plural": {
+          "one": { "stringUnit": { "state": "needs_review", "value": "%lld voto" } },
+          "other": { "stringUnit": { "state": "needs_review", "value": "%lld votos" } }
+        } } },
+        "fr": { "variations": { "plural": {
+          "one": { "stringUnit": { "state": "needs_review", "value": "%lld vote" } },
+          "other": { "stringUnit": { "state": "needs_review", "value": "%lld votes" } }
+        } } },
+        "de": { "variations": { "plural": {
+          "one": { "stringUnit": { "state": "needs_review", "value": "%lld Stimme" } },
+          "other": { "stringUnit": { "state": "needs_review", "value": "%lld Stimmen" } }
+        } } },
+        "ja": { "variations": { "plural": {
+          "other": { "stringUnit": { "state": "needs_review", "value": "%lld票" } }
+        } } },
+        "zh-Hans": { "variations": { "plural": {
+          "other": { "stringUnit": { "state": "needs_review", "value": "%lld票" } }
+        } } },
+        "pt-BR": { "variations": { "plural": {
+          "one": { "stringUnit": { "state": "needs_review", "value": "%lld voto" } },
+          "other": { "stringUnit": { "state": "needs_review", "value": "%lld votos" } }
+        } } },
+        "ko": { "variations": { "plural": {
+          "other": { "stringUnit": { "state": "needs_review", "value": "%lld표" } }
+        } } },
+        "it": { "variations": { "plural": {
+          "one": { "stringUnit": { "state": "needs_review", "value": "%lld voto" } },
+          "other": { "stringUnit": { "state": "needs_review", "value": "%lld voti" } }
+        } } },
+        "ar": { "variations": { "plural": {
+          "zero": { "stringUnit": { "state": "needs_review", "value": "%lld صوت" } },
+          "one": { "stringUnit": { "state": "needs_review", "value": "صوت واحد" } },
+          "two": { "stringUnit": { "state": "needs_review", "value": "صوتان" } },
+          "few": { "stringUnit": { "state": "needs_review", "value": "%lld أصوات" } },
+          "many": { "stringUnit": { "state": "needs_review", "value": "%lld صوتًا" } },
+          "other": { "stringUnit": { "state": "needs_review", "value": "%lld صوت" } }
+        } } },
+        "ru": { "variations": { "plural": {
+          "one": { "stringUnit": { "state": "needs_review", "value": "%lld голос" } },
+          "few": { "stringUnit": { "state": "needs_review", "value": "%lld голоса" } },
+          "many": { "stringUnit": { "state": "needs_review", "value": "%lld голосов" } },
+          "other": { "stringUnit": { "state": "needs_review", "value": "%lld голоса" } }
+        } } }
       }
     },
     "accessibility.status": {
@@ -5149,19 +4925,70 @@
       }
     },
     "accessibility.comment.count": {
+      "comment": "VoiceOver announcement for the comment count on a feedback row. %lld is the number of comments.",
       "extractionState": "manual",
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "%lld comments" } },
-        "es": { "stringUnit": { "state": "translated", "value": "%lld comentarios" } },
-        "fr": { "stringUnit": { "state": "translated", "value": "%lld commentaires" } },
-        "de": { "stringUnit": { "state": "translated", "value": "%lld Kommentare" } },
-        "ja": { "stringUnit": { "state": "translated", "value": "%lld件のコメント" } },
-        "zh-Hans": { "stringUnit": { "state": "translated", "value": "%lld条评论" } },
-        "pt-BR": { "stringUnit": { "state": "translated", "value": "%lld comentários" } },
-        "ko": { "stringUnit": { "state": "translated", "value": "댓글 %lld개" } },
-        "it": { "stringUnit": { "state": "translated", "value": "%lld commenti" } },
-        "ar": { "stringUnit": { "state": "translated", "value": "%lld تعليق" } },
-        "ru": { "stringUnit": { "state": "translated", "value": "%lld комментариев" } }
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld comment"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld comments"
+                }
+              }
+            }
+          }
+        },
+        "es": { "variations": { "plural": {
+          "one": { "stringUnit": { "state": "needs_review", "value": "%lld comentario" } },
+          "other": { "stringUnit": { "state": "needs_review", "value": "%lld comentarios" } }
+        } } },
+        "fr": { "variations": { "plural": {
+          "one": { "stringUnit": { "state": "needs_review", "value": "%lld commentaire" } },
+          "other": { "stringUnit": { "state": "needs_review", "value": "%lld commentaires" } }
+        } } },
+        "de": { "variations": { "plural": {
+          "one": { "stringUnit": { "state": "needs_review", "value": "%lld Kommentar" } },
+          "other": { "stringUnit": { "state": "needs_review", "value": "%lld Kommentare" } }
+        } } },
+        "ja": { "variations": { "plural": {
+          "other": { "stringUnit": { "state": "needs_review", "value": "%lld件のコメント" } }
+        } } },
+        "zh-Hans": { "variations": { "plural": {
+          "other": { "stringUnit": { "state": "needs_review", "value": "%lld条评论" } }
+        } } },
+        "pt-BR": { "variations": { "plural": {
+          "one": { "stringUnit": { "state": "needs_review", "value": "%lld comentário" } },
+          "other": { "stringUnit": { "state": "needs_review", "value": "%lld comentários" } }
+        } } },
+        "ko": { "variations": { "plural": {
+          "other": { "stringUnit": { "state": "needs_review", "value": "댓글 %lld개" } }
+        } } },
+        "it": { "variations": { "plural": {
+          "one": { "stringUnit": { "state": "needs_review", "value": "%lld commento" } },
+          "other": { "stringUnit": { "state": "needs_review", "value": "%lld commenti" } }
+        } } },
+        "ar": { "variations": { "plural": {
+          "zero": { "stringUnit": { "state": "needs_review", "value": "%lld تعليق" } },
+          "one": { "stringUnit": { "state": "needs_review", "value": "تعليق واحد" } },
+          "two": { "stringUnit": { "state": "needs_review", "value": "تعليقان" } },
+          "few": { "stringUnit": { "state": "needs_review", "value": "%lld تعليقات" } },
+          "many": { "stringUnit": { "state": "needs_review", "value": "%lld تعليقًا" } },
+          "other": { "stringUnit": { "state": "needs_review", "value": "%lld تعليق" } }
+        } } },
+        "ru": { "variations": { "plural": {
+          "one": { "stringUnit": { "state": "needs_review", "value": "%lld комментарий" } },
+          "few": { "stringUnit": { "state": "needs_review", "value": "%lld комментария" } },
+          "many": { "stringUnit": { "state": "needs_review", "value": "%lld комментариев" } },
+          "other": { "stringUnit": { "state": "needs_review", "value": "%lld комментария" } }
+        } } }
       }
     },
     "accessibility.rejectionReason": {

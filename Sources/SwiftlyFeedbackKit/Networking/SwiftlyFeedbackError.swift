@@ -15,25 +15,25 @@ public enum SwiftlyFeedbackError: Error, LocalizedError, Equatable {
     public var errorDescription: String? {
         switch self {
         case .invalidResponse:
-            return String(localized: "error.invalidResponse.message", bundle: #bundle)
+            return String(localized: .errorInvalidResponseMessage)
         case .badRequest(let message):
-            return message ?? String(localized: "error.badRequest.message", bundle: #bundle)
+            return message ?? String(localized: .errorBadRequestMessage)
         case .unauthorized:
-            return String(localized: "error.unauthorized.message", bundle: #bundle)
+            return String(localized: .errorUnauthorizedMessage)
         case .invalidApiKey:
-            return String(localized: "error.invalidApiKey.message", bundle: #bundle)
+            return String(localized: .errorInvalidApiKeyMessage)
         case .notFound:
-            return String(localized: "error.notFound.message", bundle: #bundle)
+            return String(localized: .errorNotFoundMessage)
         case .conflict:
-            return String(localized: "error.conflict.message", bundle: #bundle)
+            return String(localized: .errorConflictMessage)
         case .serverError(let statusCode):
-            return String(format: String(localized: "error.serverError.message", bundle: #bundle), statusCode)
+            return String(localized: .errorServerErrorMessage(statusCode))
         case .networkError(let error):
-            return String(format: String(localized: "error.networkError.message", bundle: #bundle), error.localizedDescription)
+            return String(localized: .errorNetworkErrorMessage(error.localizedDescription))
         case .decodingError(let error):
-            return String(format: String(localized: "error.decodingError.message", bundle: #bundle), error.localizedDescription)
+            return String(localized: .errorDecodingErrorMessage(error.localizedDescription))
         case .feedbackLimitReached(let message):
-            return message ?? String(localized: "error.feedbackLimit.message", bundle: #bundle)
+            return message ?? String(localized: .errorFeedbackLimitMessage)
         }
     }
 

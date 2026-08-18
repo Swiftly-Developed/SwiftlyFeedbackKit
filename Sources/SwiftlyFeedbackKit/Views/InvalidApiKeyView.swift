@@ -10,12 +10,12 @@ struct InvalidApiKeyView: View {
 
     var body: some View {
         ContentUnavailableView {
-            Label(Strings.errorInvalidApiKeyTitle, systemImage: "exclamationmark.triangle")
+            Label(String(localized: .errorInvalidApiKeyTitle), systemImage: "exclamationmark.triangle")
         } description: {
-            Text(Strings.errorInvalidApiKeyMessage)
+            Text(String(localized: .errorInvalidApiKeyMessage))
         } actions: {
             if let onRetry {
-                Button(Strings.errorRetryButton) {
+                Button(String(localized: .errorRetryButton)) {
                     onRetry()
                 }
             }

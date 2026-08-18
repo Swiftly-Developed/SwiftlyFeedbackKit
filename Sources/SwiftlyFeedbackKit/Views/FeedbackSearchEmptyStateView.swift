@@ -11,11 +11,11 @@ struct FeedbackSearchEmptyStateView: View {
 
     var body: some View {
         ContentUnavailableView {
-            Label(Strings.searchEmptyTitle, systemImage: "magnifyingglass")
+            Label(String(localized: .searchEmptyTitle), systemImage: "magnifyingglass")
         } description: {
-            Text(Strings.searchEmptyDescription)
+            Text(String(localized: .searchEmptyDescription))
         } actions: {
-            Button(Strings.searchClearButton) {
+            Button(String(localized: .searchClearButton)) {
                 onClearSearch()
             }
         }

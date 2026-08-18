@@ -14,11 +14,11 @@ struct InlineErrorView: View {
 
     var body: some View {
         ContentUnavailableView {
-            Label(Strings.errorLoadFailedTitle, systemImage: "exclamationmark.triangle")
+            Label(String(localized: .errorLoadFailedTitle), systemImage: "exclamationmark.triangle")
         } description: {
             Text(message)
         } actions: {
-            Button(Strings.errorRetryButton) {
+            Button(String(localized: .errorRetryButton)) {
                 onRetry()
             }
             .buttonStyle(.borderedProminent)
